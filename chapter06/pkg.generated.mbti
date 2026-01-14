@@ -1,0 +1,167 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "hackwaly/simple.mbt/chapter06"
+
+// Values
+pub let bottom : Type
+
+pub let control : Type
+
+pub let disable_peephole : Ref[Bool]
+
+pub let scope_arg0 : String
+
+pub let scope_ctrl : String
+
+pub let start : Ref[Node]
+
+pub let top : Type
+
+pub let type_integer : TypeInteger
+
+pub let type_integer_bot : Type
+
+pub let type_integer_top : Type
+
+pub let type_integer_zero : Type
+
+pub let type_tuple_if_both : Type
+
+pub let type_tuple_if_false : Type
+
+pub let type_tuple_if_neither : Type
+
+pub let type_tuple_if_true : Type
+
+pub let xcontrol : Type
+
+// Errors
+pub(all) suberror ParseError {
+  Msg(String)
+}
+pub impl Eq for ParseError
+pub impl Show for ParseError
+
+// Types and methods
+pub struct Node {
+  _nid : Int
+  mut _inputs : Array[Node?]
+  mut _outputs : Array[Node?]
+  mut _type : Type?
+  mut _idepth : Int
+  mut _idom : Node?
+  kind : NodeKind
+  mut _con : Type?
+  mut _scopes : Array[Map[String, Int]]
+  mut _proj_idx : Int
+  mut _proj_label : String
+  mut _start_args : Array[Type]
+  mut _phi_label : String
+}
+pub fn Node::add_def(Self, Self?) -> Self?
+pub fn Node::add_return(Self, Self) -> Self
+pub fn Node::all_cons(Self) -> Bool
+pub fn Node::compute(Self) -> Type
+pub fn Node::ctrl(Self) -> Self
+pub fn Node::define(Self, String, Self) -> Self?
+pub fn Node::del_def(Self, Int) -> Unit
+pub fn Node::dup(Self) -> Self
+pub fn Node::expr(Self) -> Self
+pub fn Node::glabel(Self) -> String
+pub fn Node::idealize(Self) -> Self?
+pub fn Node::input(Self, Int) -> Self?
+pub fn Node::input_exn(Self, Int) -> Self
+pub fn Node::is_cfg(Self) -> Bool
+pub fn Node::is_dead(Self) -> Bool
+pub fn Node::is_unused(Self) -> Bool
+pub fn Node::keep(Self) -> Self
+pub fn Node::kill(Self) -> Unit
+pub fn Node::label(Self) -> String
+pub fn Node::lookup(Self, String) -> Self?
+pub fn Node::merge_scopes(Self, Self) -> Self
+pub fn Node::n_ins(Self) -> Int
+pub fn Node::n_outs(Self) -> Int
+pub fn Node::new_add(Self, Self) -> Self
+pub fn Node::new_bool_eq(Self, Self) -> Self
+pub fn Node::new_bool_le(Self, Self) -> Self
+pub fn Node::new_bool_lt(Self, Self) -> Self
+pub fn Node::new_constant(Type) -> Self
+pub fn Node::new_div(Self, Self) -> Self
+pub fn Node::new_if(Self?, Self) -> Self
+pub fn Node::new_minus(Self) -> Self
+pub fn Node::new_mul(Self, Self) -> Self
+pub fn Node::new_not(Self) -> Self
+pub fn Node::new_phi(String, Array[Self?]) -> Self
+pub fn Node::new_proj(Self, Int, String) -> Self
+pub fn Node::new_region(Self?, Self?) -> Self
+pub fn Node::new_return(Self?, Self) -> Self
+pub fn Node::new_scope() -> Self
+pub fn Node::new_start(Array[Type]) -> Self
+pub fn Node::new_stop() -> Self
+pub fn Node::new_sub(Self, Self) -> Self
+pub fn Node::peephole(Self) -> Self
+pub fn Node::pop(Self) -> Unit
+pub fn Node::pop_n(Self, Int) -> Unit
+pub fn Node::print(Self) -> String
+pub fn Node::push(Self) -> Unit
+pub fn Node::reset() -> Unit
+pub fn Node::reverse_names(Self) -> Array[String]
+pub fn Node::set_def(Self, Int, Self?) -> Self?
+pub fn Node::unique_name(Self) -> String
+pub fn Node::unkeep(Self) -> Self
+pub fn Node::update(Self, String, Self) -> Self?
+pub impl Eq for Node
+
+pub enum NodeKind {
+  Start
+  Stop
+  Return
+  Constant
+  Add
+  Sub
+  Mul
+  Div
+  Minus
+  Not
+  If
+  Proj
+  BoolEq
+  BoolLt
+  BoolLe
+  Region
+  Phi
+  Scope
+}
+pub impl Eq for NodeKind
+pub impl Show for NodeKind
+
+type Parser
+pub fn Parser::new(String) -> Self
+pub fn Parser::new_with_arg(String, Type) -> Self
+pub fn Parser::parse(Self, show? : Bool) -> Node raise ParseError
+pub fn Parser::src(Self) -> String
+
+pub enum Type {
+  Bot
+  Top
+  Ctrl
+  XCtrl
+  IntTop
+  IntBot
+  Int(Int64)
+  Tuple(Array[Type])
+}
+pub fn Type::is_constant(Self) -> Bool
+pub fn Type::meet(Self, Self) -> Self
+pub fn Type::print_to(Self, StringBuilder) -> Unit
+pub fn Type::value_exn(Self) -> Int64
+pub impl Eq for Type
+pub impl Show for Type
+
+pub struct TypeInteger {
+}
+pub fn TypeInteger::constant(Int64) -> Type
+
+// Type aliases
+
+// Traits
+
