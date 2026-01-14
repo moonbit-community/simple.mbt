@@ -1,0 +1,52 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "hackwaly/simple.mbt/chapter01"
+
+// Values
+pub let start : Ref[Node]
+
+// Errors
+pub(all) suberror ParseError {
+  Msg(String)
+}
+pub impl Eq for ParseError
+pub impl Show for ParseError
+
+// Types and methods
+pub struct Node {
+  _nid : Int
+  mut _inputs : Array[Node?]
+  mut _outputs : Array[Node]
+  kind : NodeKind
+  _value : Int64
+}
+pub fn Node::ctrl(Self) -> Self
+pub fn Node::expr(Self) -> Self
+pub fn Node::input(Self, Int) -> Self?
+pub fn Node::input_exn(Self, Int) -> Self
+pub fn Node::is_cfg(Self) -> Bool
+pub fn Node::is_unused(Self) -> Bool
+pub fn Node::n_ins(Self) -> Int
+pub fn Node::n_outs(Self) -> Int
+pub fn Node::new_constant(Int64) -> Self
+pub fn Node::new_return(Self, Self) -> Self
+pub fn Node::new_start() -> Self
+pub fn Node::reset() -> Unit
+pub impl Eq for Node
+pub impl Show for Node
+
+pub enum NodeKind {
+  Start
+  Return
+  Constant
+}
+pub impl Eq for NodeKind
+pub impl Show for NodeKind
+
+type Parser
+pub fn Parser::new(String) -> Self
+pub fn Parser::parse(Self) -> Node raise ParseError
+
+// Type aliases
+
+// Traits
+
