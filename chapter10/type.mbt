@@ -123,8 +123,8 @@ pub fn Type::gather() -> Array[Type] {
 }
 
 ///|
-pub fn Type::mem(alias : Int) -> Type {
-  Mem(alias)
+pub fn Type::mem(mem_alias : Int) -> Type {
+  Mem(mem_alias)
 }
 
 ///|
@@ -158,13 +158,13 @@ pub fn Type::dual(self : Type) -> Type {
     IntTop => IntBot
     IntBot => IntTop
     Int(v) => Int(v)
-    Mem(alias) =>
-      if alias == 0 {
+    Mem(mem_alias) =>
+      if mem_alias == 0 {
         type_mem_bot
-      } else if alias == -1 {
+      } else if mem_alias == -1 {
         type_mem_top
       } else {
-        Mem(alias)
+        Mem(mem_alias)
       }
     MemPtr(obj, nil) => MemPtr(obj.dual(), !nil)
     Tuple(types) => Tuple(types.map(fn(t) { t.dual() }))
@@ -268,7 +268,7 @@ pub fn Type::hash_code(self : Type) -> Int {
     IntTop => 0x05
     IntBot => 0x06
     Int(v) => mix(0x10 ^ v.to_int())
-    Mem(alias) => mix(0x30 ^ alias)
+    Mem(mem_alias) => mix(0x30 ^ mem_alias)
     MemPtr(obj, nil) =>
       mix(
         (0x40 ^ obj.hash_code()) ^
@@ -294,14 +294,14 @@ pub fn Type::print_to(self : Type, sb : StringBuilder) -> Unit {
     IntTop => sb.write_string("IntTop")
     IntBot => sb.write_string("IntBot")
     Int(v) => sb.write_string(v.to_string())
-    Mem(alias) =>
-      if alias == 0 {
+    Mem(mem_alias) =>
+      if mem_alias == 0 {
         sb.write_string("MEM#TOP")
-      } else if alias == -1 {
+      } else if mem_alias == -1 {
         sb.write_string("MEM#BOT")
       } else {
         sb.write_string("MEM#")
-        sb.write_string(alias.to_string())
+        sb.write_string(mem_alias.to_string())
       }
     MemPtr(_, _) => sb.write_string(self.str())
     Tuple(types) => {
@@ -337,13 +337,13 @@ pub fn Type::str(self : Type) -> String {
           _ => "?"
         }
       }
-    Mem(alias) =>
-      if alias == 0 {
+    Mem(mem_alias) =>
+      if mem_alias == 0 {
         "MEM#TOP"
-      } else if alias == -1 {
+      } else if mem_alias == -1 {
         "MEM#BOT"
       } else {
-        "MEM#\{alias}"
+        "MEM#\{mem_alias}"
       }
     Bot => "Bot"
     Top => "Top"

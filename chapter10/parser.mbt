@@ -50,14 +50,14 @@ pub fn Parser::parse(
 ) -> Node raise ParseError {
   self._scope.push()
   ignore(
-    self._scope.define(
+    self._scope.define_(
       scope_ctrl,
       control,
       Node::new_proj(start.val, 0, scope_ctrl).peephole(),
     ),
   )
   ignore(
-    self._scope.define(
+    self._scope.define_(
       scope_arg0,
       type_integer_bot,
       Node::new_proj(start.val, 1, scope_arg0).peephole(),
@@ -181,14 +181,14 @@ fn Parser::parse_if(self : Parser) -> Node raise ParseError {
   let mut f_scope = self._scope.dup()
   let if_t_ctrl = if_t.unkeep()
   ignore(self._scope.set_def(0, Some(if_t_ctrl)))
-  ignore(self._scope.upcast(if_t_ctrl, pred, false))
+  ignore(self._scope.upcast_(if_t_ctrl, pred, false))
   self.parse_statement()
   let t_scope = self._scope
   self._scope = f_scope
   let if_f_ctrl = if_f.unkeep()
   ignore(self._scope.set_def(0, Some(if_f_ctrl)))
   if self._lexer.matchx_syntax("else") {
-    ignore(self._scope.upcast(if_f_ctrl, pred, true))
+    ignore(self._scope.upcast_(if_f_ctrl, pred, true))
     self.parse_statement()
     f_scope = self._scope
   }
@@ -341,7 +341,7 @@ fn Parser::parse_expression_statement(self : Parser) -> Node raise ParseError {
 
   match t {
     Some(t_) =>
-      if self._scope.define(name, t_, expr) is None {
+      if self._scope.define_(name, t_, expr) is None {
         raise ParseError::Msg("Redefining name '\{name}'")
       }
     None => {
@@ -380,7 +380,7 @@ fn Parser::parse_decl(self : Parser, t : Type) -> Node raise ParseError {
       "Type \{expr.ty().str()} is not of declared type \{t.str()}",
     )
   }
-  if self._scope.define(name, t, expr) is None {
+  if self._scope.define_(name, t, expr) is None {
     raise ParseError::Msg("Redefining name '\{name}'")
   }
   expr
@@ -493,21 +493,21 @@ fn Parser::parse_primary(self : Parser) -> Node raise ParseError {
 }
 
 ///|
-pub fn Parser::mem_name(alias : Int) -> String {
-  "$\{alias}"
+pub fn Parser::mem_name(alias_id : Int) -> String {
+  "$\{alias_id}"
 }
 
 ///|
-fn Parser::mem_alias(self : Parser, alias : Int) -> Node {
-  match self._scope.lookup(Parser::mem_name(alias)) {
+fn Parser::mem_alias(self : Parser, alias_id : Int) -> Node {
+  match self._scope.lookup(Parser::mem_name(alias_id)) {
     Some(n) => n
     None => panic()
   }
 }
 
 ///|
-fn Parser::mem_alias_set(self : Parser, alias : Int, st : Node) -> Unit {
-  if self._scope.update(Parser::mem_name(alias), st) is None {
+fn Parser::mem_alias_set(self : Parser, alias_id : Int, st : Node) -> Unit {
+  if self._scope.update(Parser::mem_name(alias_id), st) is None {
     panic()
   }
 }
@@ -516,20 +516,20 @@ fn Parser::mem_alias_set(self : Parser, alias : Int, st : Node) -> Unit {
 fn Parser::new_struct(self : Parser, obj : TypeStruct) -> Node {
   let n = Node::new_new(MemPtr(obj, false), self._scope.ctrl()).peephole().keep()
   let init_value = Node::new_constant(TypeInteger::constant(0L)).peephole()
-  let mut alias = match start.val._alias_starts.get(obj._name) {
-    Some(alias) => alias
+  let mut alias_id = match start.val._alias_starts.get(obj._name) {
+    Some(aid) => aid
     None => panic()
   }
   for field in obj._fields {
     let st = Node::new_store(
       field._fname,
-      alias,
-      self.mem_alias(alias),
+      alias_id,
+      self.mem_alias(alias_id),
       n,
       init_value,
     ).peephole()
-    self.mem_alias_set(alias, st)
-    alias = alias + 1
+    self.mem_alias_set(alias_id, st)
+    alias_id = alias_id + 1
   }
   n.unkeep()
 }
@@ -556,10 +556,10 @@ fn Parser::parse_postfix(self : Parser, expr : Node) -> Node raise ParseError {
     )
   }
   let base = match start.val._alias_starts.get(ptr_obj._name) {
-    Some(alias) => alias
+    Some(aid) => aid
     None => panic()
   }
-  let alias = base + idx
+  let alias_id = base + idx
 
   if self._lexer.match_syntax("=") {
     // Disambiguate "obj.fld==x" boolean test from "obj.fld=x" field assignment
@@ -568,8 +568,14 @@ fn Parser::parse_postfix(self : Parser, expr : Node) -> Node raise ParseError {
     } else {
       let val = self.parse_expression()
       self.mem_alias_set(
-        alias,
-        Node::new_store(name, alias, self.mem_alias(alias), expr, val).peephole(),
+        alias_id,
+        Node::new_store(
+          name,
+          alias_id,
+          self.mem_alias(alias_id),
+          expr,
+          val,
+        ).peephole(),
       )
       return expr
     }
@@ -579,9 +585,9 @@ fn Parser::parse_postfix(self : Parser, expr : Node) -> Node raise ParseError {
   self.parse_postfix(
     Node::new_load(
       name,
-      alias,
+      alias_id,
       declared_type,
-      self.mem_alias(alias),
+      self.mem_alias(alias_id),
       expr,
     ).peephole(),
   )

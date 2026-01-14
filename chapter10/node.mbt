@@ -168,17 +168,17 @@ pub fn Node::add_mem_proj(self : Node, ts : TypeStruct, scope : Node) -> Unit {
   for t in self._start_args {
     args.push(t)
   }
-  for alias = len; alias < max; alias = alias + 1 {
-    args.push(Mem(alias))
+  for alias_id = len; alias_id < max; alias_id = alias_id + 1 {
+    args.push(Mem(alias_id))
   }
   self._start_args = args
   self._type = Some(Tuple(args))
 
   // For each of the fields we now add a mem projection.
-  for alias = len; alias < max; alias = alias + 1 {
-    let name = "$\{alias}"
-    let n = Node::new_proj(self, alias, name).peephole()
-    ignore(scope.define(name, Mem(alias), n))
+  for alias_id = len; alias_id < max; alias_id = alias_id + 1 {
+    let name = "$\{alias_id}"
+    let n = Node::new_proj(self, alias_id, name).peephole()
+    ignore(scope.define_(name, Mem(alias_id), n))
   }
 }
 
@@ -219,14 +219,14 @@ pub fn Node::new_new(ptr : Type, ctrl : Node) -> Node {
 ///|
 pub fn Node::new_load(
   name : String,
-  alias : Int,
+  mem_alias : Int,
   declared_type : Type,
   mem_slice : Node,
   mem_ptr : Node,
 ) -> Node {
   let node = Node::new_raw(Load, [None, Some(mem_slice), Some(mem_ptr), None])
   node._memop_name = name
-  node._memop_alias = alias
+  node._memop_alias = mem_alias
   node._declared_type = declared_type
   node
 }
@@ -234,7 +234,7 @@ pub fn Node::new_load(
 ///|
 pub fn Node::new_store(
   name : String,
-  alias : Int,
+  mem_alias : Int,
   mem_slice : Node,
   mem_ptr : Node,
   value : Node,
@@ -246,7 +246,7 @@ pub fn Node::new_store(
     Some(value),
   ])
   node._memop_name = name
-  node._memop_alias = alias
+  node._memop_alias = mem_alias
   node
 }
 
@@ -1319,8 +1319,8 @@ fn Node::check_no_use_beyond(self : Node, that : Node) -> Bool {
   if self.n_outs() == 1 {
     return true
   }
-  for use in self._outputs {
-    match use {
+  for use_ in self._outputs {
+    match use_ {
       Some(u) if u != that => ignore(u.add_dep(that))
       _ => ()
     }
@@ -1816,8 +1816,8 @@ fn Node::_walk_err(self : Node, visited : Array[Bool]) -> String? {
       None => ()
     }
   }
-  for use in self._outputs {
-    match use {
+  for use_ in self._outputs {
+    match use_ {
       Some(n) =>
         match n._walk_err(visited) {
           Some(err) => return Some(err)
@@ -2062,7 +2062,7 @@ pub fn Node::pop(self : Node) -> Unit {
 }
 
 ///|
-pub fn Node::define(
+pub fn Node::define_(
   self : Node,
   name : String,
   declared_type : Type,
@@ -2281,7 +2281,7 @@ pub fn Node::end_loop(self : Node, back : Node, exit : Node) -> Unit {
 }
 
 ///|
-pub fn Node::upcast(
+pub fn Node::upcast_(
   self : Node,
   ctrl : Node,
   pred : Node,
