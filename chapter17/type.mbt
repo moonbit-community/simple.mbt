@@ -422,8 +422,8 @@ pub fn Type::meet(self : Type, other : Type) -> Type {
       } else if m0._alias == -1 || m1._alias == -1 {
         type_mem_bot
       } else {
-        let alias = if m0._alias == m1._alias { m0._alias } else { -1 }
-        Mem({ _alias: alias, _t: m0._t.meet(m1._t) })
+        let alias_ = if m0._alias == m1._alias { m0._alias } else { -1 }
+        Mem({ _alias: alias_, _t: m0._t.meet(m1._t) })
       }
     (MemPtr(obj0, nil0), MemPtr(obj1, nil1)) =>
       MemPtr(obj0.meet(obj1), nil0 || nil1)
@@ -803,10 +803,10 @@ pub fn TypeFloat::to_java_string(v : Double) -> String {
 pub fn Field::make(
   fname : String,
   typ : Type,
-  alias : Int,
+  alias_ : Int,
   xfinal : Bool,
 ) -> Field {
-  { _fname: fname, _type: typ, _alias: alias, _final: xfinal }
+  { _fname: fname, _type: typ, _alias: alias_, _final: xfinal }
 }
 
 ///|
