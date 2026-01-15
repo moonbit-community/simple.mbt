@@ -47,7 +47,7 @@ pub struct Node {
 pub fn Node::add_def(Self, Self?) -> Self?
 pub fn Node::compute(Self) -> Type
 pub fn Node::ctrl(Self) -> Self
-pub fn Node::define(Self, String, Self) -> Self?
+pub fn Node::define_(Self, String, Self) -> Self?
 pub fn Node::expr(Self) -> Self
 pub fn Node::glabel(Self) -> String
 pub fn Node::idealize(Self) -> Self?

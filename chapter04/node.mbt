@@ -770,7 +770,7 @@ pub fn Node::pop(self : Node) -> Unit {
 }
 
 ///|
-pub fn Node::define(self : Node, name : String, n : Node) -> Node? {
+pub fn Node::define_(self : Node, name : String, n : Node) -> Node? {
   if self.kind != Scope {
     panic()
   }

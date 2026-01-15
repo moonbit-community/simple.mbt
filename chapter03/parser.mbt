@@ -98,7 +98,7 @@ fn Parser::parse_decl(self : Parser) -> Node raise ParseError {
   let name = self.require_id()
   self.require_syntax("=")
   let expr = self.require(self.parse_expression(), ";")
-  if self._scope.define(name, expr) is None {
+  if self._scope.define_(name, expr) is None {
     raise ParseError::Msg("Redefining name '\{name}'")
   }
   expr

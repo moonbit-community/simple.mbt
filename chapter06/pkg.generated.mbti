@@ -62,7 +62,7 @@ pub fn Node::add_return(Self, Self) -> Self
 pub fn Node::all_cons(Self) -> Bool
 pub fn Node::compute(Self) -> Type
 pub fn Node::ctrl(Self) -> Self
-pub fn Node::define(Self, String, Self) -> Self?
+pub fn Node::define_(Self, String, Self) -> Self?
 pub fn Node::del_def(Self, Int) -> Unit
 pub fn Node::dup(Self) -> Self
 pub fn Node::expr(Self) -> Self

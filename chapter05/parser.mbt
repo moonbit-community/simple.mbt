@@ -37,13 +37,13 @@ pub fn Parser::parse(
 ) -> Node raise ParseError {
   self._scope.push()
   ignore(
-    self._scope.define(
+    self._scope.define_(
       scope_ctrl,
       Node::new_proj(start.val, 0, scope_ctrl).peephole(),
     ),
   )
   ignore(
-    self._scope.define(
+    self._scope.define_(
       scope_arg0,
       Node::new_proj(start.val, 1, scope_arg0).peephole(),
     ),
@@ -150,7 +150,7 @@ fn Parser::parse_decl(self : Parser) -> Node raise ParseError {
   let name = self.require_id()
   self.require_syntax("=")
   let expr = self.require(self.parse_expression(), ";")
-  if self._scope.define(name, expr) is None {
+  if self._scope.define_(name, expr) is None {
     raise ParseError::Msg("Redefining name '\{name}'")
   }
   expr
