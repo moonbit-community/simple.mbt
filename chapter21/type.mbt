@@ -1033,10 +1033,10 @@ pub fn TypeFloat::to_java_string(v : Double) -> String {
 pub fn Field::make(
   fname : String,
   typ : Type,
-  alias : Int,
+  alias_ : Int,
   xfinal : Bool,
 ) -> Field {
-  { _fname: fname, _type: typ, _alias: alias, _final: xfinal }
+  { _fname: fname, _type: typ, _alias: alias_, _final: xfinal }
 }
 
 ///|
