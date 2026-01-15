@@ -45,7 +45,6 @@ fn assoc(t0 : Type, t1 : Type, t2 : Type) -> Unit raise {
 test "chapter18: type adhoc" {
   assert_eq(bottom, type_integer_true.meet(type_nil))
   assert_eq(bottom, type_integer_top.meet(type_nil))
-
   let s1 = TypeStruct::make("s1", [
     Field::make("a", type_integer_bot, -1, false),
     Field::make("b", type_integer_bot, -2, false),
@@ -54,29 +53,23 @@ test "chapter18: type adhoc" {
     Field::make("a", type_integer_bot, -3, false),
     Field::make("b", type_integer_bot, -4, false),
   ])
-
   assert_eq(s1.make_ro(), s1.glb())
   assert_true(s1 != s1.dual())
   assert_eq(s1.make_ro(), s1.dual().glb())
-
   let m1 = Type::mem(1, t=type_nil)
   let m2 = Type::mem(2, t=type_integer_u16)
   let m3 = Type::mem(3, t=type_float_bot)
   let m4 = Type::mem(4, t=type_integer_bot)
-
   assert_true(m1 != m2)
   assert_true(m2 != m3)
   assert_true(m3 != m4)
-
   assert_eq(type_struct_bot, s1.meet(s2))
   assert_eq(type_mem_bot, m1.meet(m2))
   assert_eq(type_mem_bot, m1.meet(m3))
   assert_eq(type_mem_bot, m3.meet(m4))
-
   assert_eq(Type::mem(1, t=bottom), m1.glb())
   assert_eq(Type::mem(1, t=type_xnil), m1.dual())
   assert_eq(m4.dual(), m4.glb().dual())
-
   let ptr1 = Type::mem_ptr(s1)
   match ptr1 {
     MemPtr(obj, nil) => {
@@ -93,7 +86,6 @@ test "chapter18: type adhoc" {
     }
     _ => fail("expected MemPtr")
   }
-
   let ptr1nil = Type::mem_ptr(s1, nullable=true)
   match ptr1nil {
     MemPtr(obj, nil) => {
@@ -110,14 +102,11 @@ test "chapter18: type adhoc" {
     }
     _ => fail("expected MemPtr")
   }
-
   assert_true(ptr1 != ptr2)
   assert_true(ptr1 != ptr1.glb())
   assert_eq(ptr1nil.make_ro(), ptr1.glb())
-
   assert_eq(ptr1, ptr1.dual().dual())
   assert_eq(ptr1.glb().make_ro(), ptr1.dual().glb())
-
   assert_eq(type_mem_ptr_bot, ptr1.meet(ptr2nil))
   assert_eq(ptr1.glb(), ptr1.meet(type_nil).make_ro())
 
@@ -126,16 +115,12 @@ test "chapter18: type adhoc" {
   let bot_ptr = type_mem_ptr_bot
   let ptr = type_mem_ptr_voidptr
   let null_ = type_nil
-
   assert_eq(bot_ptr, null_.meet(ptr))
   assert_eq(ptr, ptr1.meet(ptr2))
-
   let null_join_ptr1 = null_.join(ptr1)
   assert_eq(type_ptr_xnptr, null_join_ptr1)
-
   let null_join_ptr = ptr.join(null_)
   assert_eq(type_ptr_xnptr, null_join_ptr)
-
   ignore(top_ptr)
   ignore(ptr1.dual())
   ignore(ptr1nil.dual())

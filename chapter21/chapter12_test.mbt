@@ -42,7 +42,7 @@ test "chapter12: square root" {
   let stop = parser.parse(show=false).iterate()
   assert_eq(
     stop.print(),
-    "return Phi(Loop,(flt)arg,(((ToFloat/Phi_guess)+Phi_guess)/2.0));",
+    "return Phi(Loop,(flt)arg,(((ToFloat/Phi_guess)+Phi_guess)/2.0f));",
   )
   assert_true(
     eval_float(stop, 9L).is_close(
@@ -64,6 +64,6 @@ test "chapter12: square root" {
 test "chapter12: fp ops" {
   let parser = Parser::new("flt x = arg;\n" + "return x+1==x;\n")
   let stop = parser.parse(show=false).iterate()
-  assert_eq(stop.print(), "return ((flt)arg==(ToFloat+1.0));")
+  assert_eq(stop.print(), "return ((flt)arg==(ToFloat+1.0f));")
   assert_eq(eval_int12(stop, 1L), 0L)
 }

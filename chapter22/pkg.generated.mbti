@@ -8,6 +8,8 @@ pub let control : Type
 
 pub let disable_peephole : Ref[Bool]
 
+pub fn inst_select_x86_64_v2(Node) -> Unit
+
 pub let iter_cnt : Ref[Int]
 
 pub let iter_nop_cnt : Ref[Int]
@@ -122,6 +124,35 @@ pub impl Eq for ParseError
 pub impl Show for ParseError
 
 // Types and methods
+pub enum CallingConv {
+  Win64
+  SystemV
+}
+pub impl Eq for CallingConv
+pub impl Show for CallingConv
+
+pub struct CodeGen {
+  mut _phase : Phase?
+  _src : String
+  _arg : Type
+  mut _calling_conv : CallingConv?
+  mut _start : Node
+  mut _stop : Node
+  mut _parser : Parser
+}
+pub fn CodeGen::gcm(Self, _show? : Bool) -> Self
+pub fn CodeGen::inst_select(Self, String, String) -> Self
+pub fn CodeGen::local_sched(Self) -> Self
+pub fn CodeGen::new(String, arg? : Type) -> Self
+pub fn CodeGen::opto(Self) -> Self
+pub fn CodeGen::parse(Self, show? : Bool) -> Self raise ParseError
+pub fn CodeGen::print(Self) -> String
+pub fn CodeGen::type_check(Self) -> Self raise ParseError
+
+pub struct Eval2 {
+}
+pub fn Eval2::eval(CodeGen, Int64, loops? : Int) -> String
+
 pub struct EvalResult {
   typ : EvalResultType
   value : Int64
@@ -220,6 +251,7 @@ pub struct Node {
   mut _memop_alias : Int
   mut _memop_init : Bool
   mut _struct_ts : TypeStruct?
+  mut _mach_op : String
 }
 pub fn Node::add_def(Self, Self?) -> Self?
 pub fn Node::add_guards(Self, Self, Self?, Bool) -> Unit
@@ -368,6 +400,7 @@ pub enum NodeKind {
   Loop
   Phi
   Scope
+  Mach
 }
 pub impl Eq for NodeKind
 pub impl Show for NodeKind
@@ -385,6 +418,18 @@ pub fn Parser::new(String) -> Self
 pub fn Parser::new_with_arg(String, Type) -> Self
 pub fn Parser::parse(Self, show? : Bool) -> Node raise ParseError
 pub fn Parser::src(Self) -> String
+
+pub enum Phase {
+  Parse
+  Opto
+  TypeCheck
+  InstructionSelection
+  Schedule
+  LocalSched
+  RegAlloc
+}
+pub impl Eq for Phase
+pub impl Show for Phase
 
 pub enum Type {
   Bot
