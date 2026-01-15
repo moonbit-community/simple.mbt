@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "hackwaly/simple.mbt/chapter08"
+package "hackwaly/simple.mbt/chapter09"
 
 // Values
 pub let bottom : Type
@@ -7,6 +7,10 @@ pub let bottom : Type
 pub let control : Type
 
 pub let disable_peephole : Ref[Bool]
+
+pub let iter_cnt : Ref[Int]
+
+pub let iter_nop_cnt : Ref[Int]
 
 pub let scope_arg0 : String
 
@@ -64,6 +68,15 @@ pub fn GraphEvaluator::evaluate(Node, parameter? : Int64) -> Int64
 pub fn GraphEvaluator::evaluate_with_loops(Node, parameter? : Int64, loops? : Int) -> Int64
 pub fn GraphEvaluator::evaluate_with_result(Node, parameter? : Int64, loops? : Int) -> EvalResult
 
+pub struct IterPeeps {
+}
+pub fn IterPeeps::add(Node) -> Node
+pub fn IterPeeps::add_all(Array[Node?]) -> Unit
+pub fn IterPeeps::add_all_nodes(Array[Node]) -> Unit
+pub fn IterPeeps::iterate(Node, show? : Bool) -> Node
+pub fn IterPeeps::mid_assert() -> Bool
+pub fn IterPeeps::reset() -> Unit
+
 pub struct Node {
   _nid : Int
   mut _inputs : Array[Node?]
@@ -71,6 +84,8 @@ pub struct Node {
   mut _type : Type?
   mut _idepth : Int
   mut _idom : Node?
+  mut _deps : Array[Node]?
+  mut _hash : Int
   kind : NodeKind
   mut _con : Type?
   mut _scopes : Array[Map[String, Int]]
@@ -81,11 +96,10 @@ pub struct Node {
 }
 pub fn Node::add_def(Self, Self?) -> Self?
 pub fn Node::add_return(Self, Self) -> Self
-pub fn Node::all_cons(Self) -> Bool
 pub fn Node::compute(Self) -> Type
 pub fn Node::ctrl(Self) -> Self
 pub fn Node::define_(Self, String, Self) -> Self?
-pub fn Node::del_def(Self, Int) -> Unit
+pub fn Node::del_def(Self, Int) -> Self
 pub fn Node::dup(Self, is_loop? : Bool) -> Self
 pub fn Node::end_loop(Self, Self, Self) -> Unit
 pub fn Node::expr(Self) -> Self
@@ -96,11 +110,13 @@ pub fn Node::input_exn(Self, Int) -> Self
 pub fn Node::is_cfg(Self) -> Bool
 pub fn Node::is_dead(Self) -> Bool
 pub fn Node::is_unused(Self) -> Bool
+pub fn Node::iterate(Self, show? : Bool) -> Self
 pub fn Node::keep(Self) -> Self
 pub fn Node::kill(Self) -> Unit
 pub fn Node::label(Self) -> String
 pub fn Node::lookup(Self, String) -> Self?
 pub fn Node::merge_scopes(Self, Self) -> Self
+pub fn Node::move_deps_to_worklist(Self) -> Unit
 pub fn Node::n_ins(Self) -> Int
 pub fn Node::n_outs(Self) -> Int
 pub fn Node::new_add(Self, Self) -> Self
@@ -123,6 +139,7 @@ pub fn Node::new_start(Array[Type]) -> Self
 pub fn Node::new_stop() -> Self
 pub fn Node::new_sub(Self, Self) -> Self
 pub fn Node::peephole(Self) -> Self
+pub fn Node::peephole_opt(Self) -> Self?
 pub fn Node::pop(Self) -> Unit
 pub fn Node::pop_n(Self, Int) -> Unit
 pub fn Node::print(Self) -> String
@@ -130,6 +147,7 @@ pub fn Node::push(Self) -> Unit
 pub fn Node::reset() -> Unit
 pub fn Node::reverse_names(Self) -> Array[String]
 pub fn Node::set_def(Self, Int, Self?) -> Self?
+pub fn Node::set_type(Self, Type) -> Type?
 pub fn Node::unique_name(Self) -> String
 pub fn Node::unkeep(Self) -> Self
 pub fn Node::update(Self, String, Self) -> Self?
@@ -175,7 +193,12 @@ pub enum Type {
   Int(Int64)
   Tuple(Array[Type])
 }
+pub fn Type::dual(Self) -> Self
+pub fn Type::hash_code(Self) -> Int
 pub fn Type::is_constant(Self) -> Bool
+pub fn Type::is_high_or_const(Self) -> Bool
+pub fn Type::isa(Self, Self) -> Bool
+pub fn Type::join(Self, Self) -> Self
 pub fn Type::meet(Self, Self) -> Self
 pub fn Type::print_to(Self, StringBuilder) -> Unit
 pub fn Type::value_exn(Self) -> Int64

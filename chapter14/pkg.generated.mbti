@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "hackwaly/simple.mbt/chapter08"
+package "hackwaly/simple.mbt/chapter14"
 
 // Values
 pub let bottom : Type
@@ -7,6 +7,12 @@ pub let bottom : Type
 pub let control : Type
 
 pub let disable_peephole : Ref[Bool]
+
+pub let iter_cnt : Ref[Int]
+
+pub let iter_nop_cnt : Ref[Int]
+
+pub let scheduled : Ref[Bool]
 
 pub let scope_arg0 : String
 
@@ -16,13 +22,71 @@ pub let start : Ref[Node]
 
 pub let top : Type
 
-pub let type_integer : TypeInteger
+pub let type_field_test : Field
+
+pub let type_float_b32 : Type
+
+pub let type_float_bot : Type
+
+pub let type_float_t32 : Type
+
+pub let type_float_top : Type
+
+pub let type_float_zero : Type
+
+pub let type_integer_bool : Type
 
 pub let type_integer_bot : Type
 
+pub let type_integer_false : Type
+
+pub let type_integer_i16 : Type
+
+pub let type_integer_i32 : Type
+
+pub let type_integer_i8 : Type
+
 pub let type_integer_top : Type
 
+pub let type_integer_true : Type
+
+pub let type_integer_u1 : Type
+
+pub let type_integer_u16 : Type
+
+pub let type_integer_u32 : Type
+
+pub let type_integer_u8 : Type
+
 pub let type_integer_zero : Type
+
+pub let type_mem_bot : Type
+
+pub let type_mem_ptr_bot : Type
+
+pub let type_mem_ptr_nullptr : Type
+
+pub let type_mem_ptr_test : Type
+
+pub let type_mem_ptr_top : Type
+
+pub let type_mem_ptr_voidptr : Type
+
+pub let type_mem_top : Type
+
+pub let type_struct_bot : TypeStruct
+
+pub let type_struct_s1 : TypeStruct
+
+pub let type_struct_s1_forward : TypeStruct
+
+pub let type_struct_s2 : TypeStruct
+
+pub let type_struct_s2_forward : TypeStruct
+
+pub let type_struct_test : TypeStruct
+
+pub let type_struct_top : TypeStruct
 
 pub let type_tuple_if_both : Type
 
@@ -33,6 +97,10 @@ pub let type_tuple_if_neither : Type
 pub let type_tuple_if_true : Type
 
 pub let xcontrol : Type
+
+pub let xctrl : Ref[Node]
+
+pub let zero : Ref[Node]
 
 // Errors
 pub(all) suberror ParseError {
@@ -57,12 +125,54 @@ pub enum EvalResultType {
 pub impl Eq for EvalResultType
 pub impl Show for EvalResultType
 
+pub enum EvalStatus {
+  Value(EvalValue)
+  Fallthrough
+  Timeout
+}
+pub impl Show for EvalStatus
+
+pub enum EvalValue {
+  Int(Int64)
+  Float(Double)
+  Obj(Obj)
+  Null
+  Mem(Int)
+  Tuple(Array[EvalValue])
+}
+pub impl Show for EvalValue
+
+type Evaluator
+pub fn Evaluator::evaluate(Node, parameter? : Int64, loops? : Int) -> EvalValue
+pub fn Evaluator::evaluate_with_result(Node, parameter? : Int64, loops? : Int) -> EvalStatus
+
+pub struct Field {
+  _fname : String
+  _type : Type
+}
+pub fn Field::make(String, Type) -> Self
+pub impl Eq for Field
+
+pub struct GlobalCodeMotion {
+}
+pub fn GlobalCodeMotion::build_cfg(Node) -> Unit
+pub fn GlobalCodeMotion::fix_loops(Node) -> Unit
+
 pub struct GraphEvaluator {
   mut _cache_values : Array[Int64?]
 }
 pub fn GraphEvaluator::evaluate(Node, parameter? : Int64) -> Int64
 pub fn GraphEvaluator::evaluate_with_loops(Node, parameter? : Int64, loops? : Int) -> Int64
 pub fn GraphEvaluator::evaluate_with_result(Node, parameter? : Int64, loops? : Int) -> EvalResult
+
+pub struct IterPeeps {
+}
+pub fn IterPeeps::add(Node) -> Node
+pub fn IterPeeps::add_all(Array[Node?]) -> Unit
+pub fn IterPeeps::add_all_nodes(Array[Node]) -> Unit
+pub fn IterPeeps::iterate(Node) -> Node
+pub fn IterPeeps::mid_assert() -> Bool
+pub fn IterPeeps::reset() -> Unit
 
 pub struct Node {
   _nid : Int
@@ -71,21 +181,33 @@ pub struct Node {
   mut _type : Type?
   mut _idepth : Int
   mut _idom : Node?
+  mut _loop_depth : Int
+  mut _anti : Int
+  mut _deps : Array[Node]?
+  mut _hash : Int
   kind : NodeKind
   mut _con : Type?
   mut _scopes : Array[Map[String, Int]]
+  mut _types : Array[Map[String, Type]]
   mut _proj_idx : Int
   mut _proj_label : String
   mut _start_args : Array[Type]
+  mut _alias_starts : Map[String, Int]
   mut _phi_label : String
+  mut _declared_type : Type
+  mut _memop_name : String
+  mut _memop_alias : Int
+  mut _memop_init : Bool
 }
 pub fn Node::add_def(Self, Self?) -> Self?
+pub fn Node::add_mem_proj(Self, TypeStruct, Self) -> Unit
 pub fn Node::add_return(Self, Self) -> Self
-pub fn Node::all_cons(Self) -> Bool
+pub fn Node::block_head(Self) -> Bool
+pub fn Node::cfg0(Self) -> Self
 pub fn Node::compute(Self) -> Type
 pub fn Node::ctrl(Self) -> Self
-pub fn Node::define(Self, String, Self) -> Self?
-pub fn Node::del_def(Self, Int) -> Unit
+pub fn Node::define_(Self, String, Type, Self) -> Self?
+pub fn Node::del_def(Self, Int) -> Self
 pub fn Node::dup(Self, is_loop? : Bool) -> Self
 pub fn Node::end_loop(Self, Self, Self) -> Unit
 pub fn Node::expr(Self) -> Self
@@ -95,34 +217,63 @@ pub fn Node::input(Self, Int) -> Self?
 pub fn Node::input_exn(Self, Int) -> Self
 pub fn Node::is_cfg(Self) -> Bool
 pub fn Node::is_dead(Self) -> Bool
+pub fn Node::is_pinned(Self) -> Bool
 pub fn Node::is_unused(Self) -> Bool
+pub fn Node::iterate(Self, show? : Bool) -> Self raise ParseError
 pub fn Node::keep(Self) -> Self
 pub fn Node::kill(Self) -> Unit
 pub fn Node::label(Self) -> String
 pub fn Node::lookup(Self, String) -> Self?
+pub fn Node::lookup_declared_type(Self, String) -> Type?
 pub fn Node::merge_scopes(Self, Self) -> Self
+pub fn Node::move_deps_to_worklist(Self) -> Unit
 pub fn Node::n_ins(Self) -> Int
 pub fn Node::n_outs(Self) -> Int
 pub fn Node::new_add(Self, Self) -> Self
+pub fn Node::new_addf(Self, Self) -> Self
+pub fn Node::new_and(Self, Self) -> Self
 pub fn Node::new_bool_eq(Self, Self) -> Self
+pub fn Node::new_bool_eqf(Self, Self) -> Self
 pub fn Node::new_bool_le(Self, Self) -> Self
+pub fn Node::new_bool_lef(Self, Self) -> Self
 pub fn Node::new_bool_lt(Self, Self) -> Self
+pub fn Node::new_bool_ltf(Self, Self) -> Self
+pub fn Node::new_cast(Type, Self?, Self) -> Self
 pub fn Node::new_constant(Type) -> Self
+pub fn Node::new_cproj(Self, Int, String) -> Self
 pub fn Node::new_div(Self, Self) -> Self
+pub fn Node::new_divf(Self, Self) -> Self
 pub fn Node::new_if(Self?, Self) -> Self
+pub fn Node::new_load(String, Int, Type, Self, Self) -> Self
 pub fn Node::new_loop(Self?) -> Self
 pub fn Node::new_minus(Self) -> Self
+pub fn Node::new_minusf(Self) -> Self
 pub fn Node::new_mul(Self, Self) -> Self
+pub fn Node::new_mulf(Self, Self) -> Self
+pub fn Node::new_never(Self) -> Self
+pub fn Node::new_new(Type, Self) -> Self
 pub fn Node::new_not(Self) -> Self
-pub fn Node::new_phi(String, Array[Self?]) -> Self
+pub fn Node::new_or(Self, Self) -> Self
+pub fn Node::new_phi(String, Type, Array[Self?]) -> Self
 pub fn Node::new_proj(Self, Int, String) -> Self
 pub fn Node::new_region(Self?, Self?) -> Self
-pub fn Node::new_return(Self?, Self) -> Self
+pub fn Node::new_return(Self?, Self, Self) -> Self
+pub fn Node::new_return0(Self?, Self) -> Self
+pub fn Node::new_round_f32(Self) -> Self
+pub fn Node::new_sar(Self, Self) -> Self
 pub fn Node::new_scope() -> Self
+pub fn Node::new_shl(Self, Self) -> Self
+pub fn Node::new_shr(Self, Self) -> Self
 pub fn Node::new_start(Array[Type]) -> Self
 pub fn Node::new_stop() -> Self
+pub fn Node::new_store(String, Int, Type, Self, Self, Self, Self, init? : Bool) -> Self
 pub fn Node::new_sub(Self, Self) -> Self
+pub fn Node::new_subf(Self, Self) -> Self
+pub fn Node::new_to_float(Self) -> Self
+pub fn Node::new_xctrl() -> Self
+pub fn Node::new_xor(Self, Self) -> Self
 pub fn Node::peephole(Self) -> Self
+pub fn Node::peephole_opt(Self) -> Self?
 pub fn Node::pop(Self) -> Unit
 pub fn Node::pop_n(Self, Int) -> Unit
 pub fn Node::print(Self) -> String
@@ -130,9 +281,14 @@ pub fn Node::push(Self) -> Unit
 pub fn Node::reset() -> Unit
 pub fn Node::reverse_names(Self) -> Array[String]
 pub fn Node::set_def(Self, Int, Self?) -> Self?
+pub fn Node::set_type(Self, Type) -> Type?
+pub fn Node::ty(Self) -> Type
+pub fn Node::uid() -> Int
 pub fn Node::unique_name(Self) -> String
 pub fn Node::unkeep(Self) -> Self
+pub fn Node::upcast_(Self, Self, Self, Bool) -> Self?
 pub fn Node::update(Self, String, Self) -> Self?
+pub fn Node::widen(Self) -> Self
 pub impl Eq for Node
 
 pub enum NodeKind {
@@ -140,17 +296,40 @@ pub enum NodeKind {
   Stop
   Return
   Constant
+  XCtrl
+  New
+  Load
+  Store
+  Cast
+  ToFloat
+  RoundF32
   Add
+  AddF
   Sub
+  SubF
   Mul
+  MulF
   Div
+  DivF
   Minus
+  MinusF
   Not
+  Shl
+  Shr
+  Sar
+  And
+  Or
+  Xor
   If
+  Never
+  CProj
   Proj
   BoolEq
+  BoolEqF
   BoolLt
+  BoolLtF
   BoolLe
+  BoolLeF
   Region
   Loop
   Phi
@@ -159,7 +338,15 @@ pub enum NodeKind {
 pub impl Eq for NodeKind
 pub impl Show for NodeKind
 
+pub struct Obj {
+  id : Int
+  struct_ : TypeStruct
+  fields : Array[EvalValue]
+}
+pub impl Show for Obj
+
 type Parser
+pub fn Parser::mem_name(Int) -> String
 pub fn Parser::new(String) -> Self
 pub fn Parser::new_with_arg(String, Type) -> Self
 pub fn Parser::parse(Self, show? : Bool) -> Node raise ParseError
@@ -170,21 +357,76 @@ pub enum Type {
   Top
   Ctrl
   XCtrl
-  IntTop
-  IntBot
-  Int(Int64)
+  Int(TypeInteger)
+  Flt(TypeFloat)
+  Mem(Int)
+  MemPtr(TypeStruct, Bool)
   Tuple(Array[Type])
 }
+pub fn Type::dual(Self) -> Self
+pub fn Type::gather() -> Array[Self]
+pub fn Type::glb(Self) -> Self
+pub fn Type::hash_code(Self) -> Int
 pub fn Type::is_constant(Self) -> Bool
+pub fn Type::is_high(Self) -> Bool
+pub fn Type::is_high_or_const(Self) -> Bool
+pub fn Type::isa(Self, Self) -> Bool
+pub fn Type::join(Self, Self) -> Self
+pub fn Type::make_init(Self) -> Self
 pub fn Type::meet(Self, Self) -> Self
+pub fn Type::mem(Int) -> Self
+pub fn Type::mem_ptr(TypeStruct, nil? : Bool) -> Self
 pub fn Type::print_to(Self, StringBuilder) -> Unit
+pub fn Type::str(Self) -> String
 pub fn Type::value_exn(Self) -> Int64
 pub impl Eq for Type
 pub impl Show for Type
 
+pub struct TypeFloat {
+  _sz : Int
+  _con : Double
+}
+pub fn TypeFloat::constant(Double) -> Type
+pub fn TypeFloat::is_constant(Self) -> Bool
+pub fn TypeFloat::is_f32(Self) -> Bool
+pub fn TypeFloat::is_high(Self) -> Bool
+pub fn TypeFloat::is_high_or_const(Self) -> Bool
+pub fn TypeFloat::print_to(Self, StringBuilder) -> Unit
+pub fn TypeFloat::str(Self) -> String
+pub fn TypeFloat::to_java_string(Double) -> String
+pub fn TypeFloat::value_exn(Self) -> Double
+pub fn TypeFloat::xmeet(Self, Self) -> Type
+pub impl Eq for TypeFloat
+
 pub struct TypeInteger {
+  _min : Int64
+  _max : Int64
 }
 pub fn TypeInteger::constant(Int64) -> Type
+pub fn TypeInteger::is_constant(Self) -> Bool
+pub fn TypeInteger::is_high(Self) -> Bool
+pub fn TypeInteger::is_high_or_const(Self) -> Bool
+pub fn TypeInteger::make(Int64, Int64) -> Type
+pub fn TypeInteger::make_con(Bool, Int64) -> Type
+pub fn TypeInteger::mask(Self) -> Int64
+pub fn TypeInteger::str(Self) -> String
+pub fn TypeInteger::value_exn(Self) -> Int64
+pub impl Eq for TypeInteger
+
+pub struct TypeStruct {
+  _name : String
+  _fields : Array[Field]?
+}
+pub fn TypeStruct::dual(Self) -> Self
+pub fn TypeStruct::find(Self, String) -> Int
+pub fn TypeStruct::glb(Self) -> Self
+pub fn TypeStruct::hash_code(Self) -> Int
+pub fn TypeStruct::make(String, Array[Field]) -> Self
+pub fn TypeStruct::make_forward(String) -> Self
+pub fn TypeStruct::meet(Self, Self) -> Self
+pub fn TypeStruct::str(Self) -> String
+pub impl Eq for TypeStruct
+pub impl Show for TypeStruct
 
 // Type aliases
 

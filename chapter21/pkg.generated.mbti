@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "hackwaly/simple.mbt/chapter08"
+package "hackwaly/simple.mbt/chapter21"
 
 // Values
 pub let bottom : Type
@@ -8,21 +8,95 @@ pub let control : Type
 
 pub let disable_peephole : Ref[Bool]
 
+pub let iter_cnt : Ref[Int]
+
+pub let iter_nop_cnt : Ref[Int]
+
+pub let scheduled : Ref[Bool]
+
 pub let scope_arg0 : String
 
 pub let scope_ctrl : String
+
+pub let scope_mem0 : String
 
 pub let start : Ref[Node]
 
 pub let top : Type
 
-pub let type_integer : TypeInteger
+pub let type_field_test : Field
+
+pub let type_float_b32 : Type
+
+pub let type_float_bot : Type
+
+pub let type_float_t32 : Type
+
+pub let type_float_top : Type
+
+pub let type_float_zero : Type
+
+pub let type_integer_bool : Type
 
 pub let type_integer_bot : Type
 
+pub let type_integer_false : Type
+
+pub let type_integer_i16 : Type
+
+pub let type_integer_i32 : Type
+
+pub let type_integer_i8 : Type
+
 pub let type_integer_top : Type
 
+pub let type_integer_true : Type
+
+pub let type_integer_u1 : Type
+
+pub let type_integer_u16 : Type
+
+pub let type_integer_u32 : Type
+
+pub let type_integer_u8 : Type
+
 pub let type_integer_zero : Type
+
+pub let type_mem_bot : Type
+
+pub let type_mem_ptr_bot : Type
+
+pub let type_mem_ptr_test : Type
+
+pub let type_mem_ptr_top : Type
+
+pub let type_mem_ptr_voidptr : Type
+
+pub let type_mem_top : Type
+
+pub let type_nil : Type
+
+pub let type_ptr_nptr : Type
+
+pub let type_ptr_ptr : Type
+
+pub let type_ptr_xnptr : Type
+
+pub let type_ptr_xptr : Type
+
+pub let type_struct_bot : TypeStruct
+
+pub let type_struct_s1 : TypeStruct
+
+pub let type_struct_s1_forward : TypeStruct
+
+pub let type_struct_s2 : TypeStruct
+
+pub let type_struct_s2_forward : TypeStruct
+
+pub let type_struct_test : TypeStruct
+
+pub let type_struct_top : TypeStruct
 
 pub let type_tuple_if_both : Type
 
@@ -32,7 +106,13 @@ pub let type_tuple_if_neither : Type
 
 pub let type_tuple_if_true : Type
 
+pub let type_xnil : Type
+
 pub let xcontrol : Type
+
+pub let xctrl : Ref[Node]
+
+pub let zero : Ref[Node]
 
 // Errors
 pub(all) suberror ParseError {
@@ -57,12 +137,59 @@ pub enum EvalResultType {
 pub impl Eq for EvalResultType
 pub impl Show for EvalResultType
 
+pub enum EvalStatus {
+  Value(EvalValue)
+  Fallthrough
+  Timeout
+}
+pub impl Show for EvalStatus
+
+pub enum EvalValue {
+  Int(Int64)
+  Float(Double)
+  Obj(Obj)
+  Null
+  Mem(Int)
+  Tuple(Array[EvalValue])
+}
+pub impl Show for EvalValue
+
+type Evaluator
+pub fn Evaluator::evaluate(Node, parameter? : Int64, loops? : Int) -> EvalValue
+pub fn Evaluator::evaluate_with_result(Node, parameter? : Int64, loops? : Int) -> EvalStatus
+
+pub struct Field {
+  _fname : String
+  _type : Type
+  _alias : Int
+  _final : Bool
+}
+pub fn Field::is_final(Self) -> Bool
+pub fn Field::make(String, Type, Int, Bool) -> Self
+pub fn Field::make_from(Self, Type) -> Self
+pub fn Field::make_ro(Self) -> Self
+pub impl Eq for Field
+
+pub struct GlobalCodeMotion {
+}
+pub fn GlobalCodeMotion::build_cfg(Node) -> Unit
+pub fn GlobalCodeMotion::fix_loops(Node) -> Unit
+
 pub struct GraphEvaluator {
   mut _cache_values : Array[Int64?]
 }
 pub fn GraphEvaluator::evaluate(Node, parameter? : Int64) -> Int64
 pub fn GraphEvaluator::evaluate_with_loops(Node, parameter? : Int64, loops? : Int) -> Int64
 pub fn GraphEvaluator::evaluate_with_result(Node, parameter? : Int64, loops? : Int) -> EvalResult
+
+pub struct IterPeeps {
+}
+pub fn IterPeeps::add(Node) -> Node
+pub fn IterPeeps::add_all(Array[Node?]) -> Unit
+pub fn IterPeeps::add_all_nodes(Array[Node]) -> Unit
+pub fn IterPeeps::iterate(Node) -> Node
+pub fn IterPeeps::mid_assert() -> Bool
+pub fn IterPeeps::reset() -> Unit
 
 pub struct Node {
   _nid : Int
@@ -71,68 +198,128 @@ pub struct Node {
   mut _type : Type?
   mut _idepth : Int
   mut _idom : Node?
+  mut _loop_depth : Int
+  mut _anti : Int
+  mut _deps : Array[Node]?
+  mut _hash : Int
   kind : NodeKind
   mut _con : Type?
   mut _scopes : Array[Map[String, Int]]
+  mut _types : Array[Map[String, Type]]
+  mut _vars : Array[Var]
+  mut _lex_size : Array[Int]
+  mut _in_cons : Array[Bool]
+  mut _guards : Array[Node]
   mut _proj_idx : Int
   mut _proj_label : String
   mut _start_args : Array[Type]
+  mut _alias_starts : Map[String, Int]
   mut _phi_label : String
+  mut _declared_type : Type
+  mut _memop_name : String
+  mut _memop_alias : Int
+  mut _memop_init : Bool
+  mut _struct_ts : TypeStruct?
 }
 pub fn Node::add_def(Self, Self?) -> Self?
+pub fn Node::add_guards(Self, Self, Self?, Bool) -> Unit
 pub fn Node::add_return(Self, Self) -> Self
-pub fn Node::all_cons(Self) -> Bool
+pub fn Node::block_head(Self) -> Bool
+pub fn Node::cfg0(Self) -> Self
 pub fn Node::compute(Self) -> Type
 pub fn Node::ctrl(Self) -> Self
-pub fn Node::define(Self, String, Self) -> Self?
-pub fn Node::del_def(Self, Int) -> Unit
+pub fn Node::define_(Self, String, Type, Bool, Self) -> Bool
+pub fn Node::del_def(Self, Int) -> Self
 pub fn Node::dup(Self, is_loop? : Bool) -> Self
 pub fn Node::end_loop(Self, Self, Self) -> Unit
 pub fn Node::expr(Self) -> Self
 pub fn Node::glabel(Self) -> String
 pub fn Node::idealize(Self) -> Self?
+pub fn Node::in_con(Self) -> Bool
 pub fn Node::input(Self, Int) -> Self?
 pub fn Node::input_exn(Self, Int) -> Self
 pub fn Node::is_cfg(Self) -> Bool
 pub fn Node::is_dead(Self) -> Bool
+pub fn Node::is_pinned(Self) -> Bool
 pub fn Node::is_unused(Self) -> Bool
+pub fn Node::iterate(Self, show? : Bool) -> Self raise ParseError
 pub fn Node::keep(Self) -> Self
 pub fn Node::kill(Self) -> Unit
 pub fn Node::label(Self) -> String
-pub fn Node::lookup(Self, String) -> Self?
+pub fn Node::lookup(Self, String) -> Var?
+pub fn Node::lookup_declared_type(Self, String) -> Type?
+pub fn Node::mem(Self) -> Self
+pub fn Node::mem_alias(Self, Int) -> Self
+pub fn Node::mem_alias_set(Self, Int, Self) -> Unit
 pub fn Node::merge_scopes(Self, Self) -> Self
+pub fn Node::move_deps_to_worklist(Self) -> Unit
 pub fn Node::n_ins(Self) -> Int
 pub fn Node::n_outs(Self) -> Int
 pub fn Node::new_add(Self, Self) -> Self
+pub fn Node::new_addf(Self, Self) -> Self
+pub fn Node::new_and(Self, Self) -> Self
 pub fn Node::new_bool_eq(Self, Self) -> Self
+pub fn Node::new_bool_eqf(Self, Self) -> Self
 pub fn Node::new_bool_le(Self, Self) -> Self
+pub fn Node::new_bool_lef(Self, Self) -> Self
 pub fn Node::new_bool_lt(Self, Self) -> Self
+pub fn Node::new_bool_ltf(Self, Self) -> Self
+pub fn Node::new_cast(Type, Self?, Self) -> Self
 pub fn Node::new_constant(Type) -> Self
+pub fn Node::new_cproj(Self, Int, String) -> Self
 pub fn Node::new_div(Self, Self) -> Self
+pub fn Node::new_divf(Self, Self) -> Self
 pub fn Node::new_if(Self?, Self) -> Self
+pub fn Node::new_load(String, Int, Type, Self, Self, Self) -> Self
 pub fn Node::new_loop(Self?) -> Self
+pub fn Node::new_mem() -> Self
 pub fn Node::new_minus(Self) -> Self
+pub fn Node::new_minusf(Self) -> Self
 pub fn Node::new_mul(Self, Self) -> Self
+pub fn Node::new_mulf(Self, Self) -> Self
+pub fn Node::new_never(Self) -> Self
+pub fn Node::new_new(Type, Self, Self, Array[Self], Array[Self]) -> Self
 pub fn Node::new_not(Self) -> Self
-pub fn Node::new_phi(String, Array[Self?]) -> Self
+pub fn Node::new_or(Self, Self) -> Self
+pub fn Node::new_phi(String, Type, Array[Self?]) -> Self
 pub fn Node::new_proj(Self, Int, String) -> Self
+pub fn Node::new_read_only(Self) -> Self
 pub fn Node::new_region(Self?, Self?) -> Self
-pub fn Node::new_return(Self?, Self) -> Self
+pub fn Node::new_return(Self?, Self, Self) -> Self
+pub fn Node::new_return0(Self?, Self) -> Self
+pub fn Node::new_round_f32(Self) -> Self
+pub fn Node::new_sar(Self, Self) -> Self
 pub fn Node::new_scope() -> Self
+pub fn Node::new_shl(Self, Self) -> Self
+pub fn Node::new_shr(Self, Self) -> Self
 pub fn Node::new_start(Array[Type]) -> Self
 pub fn Node::new_stop() -> Self
+pub fn Node::new_store(String, Int, Type, Self, Self, Self, Self, init? : Bool) -> Self
+pub fn Node::new_struct() -> Self
 pub fn Node::new_sub(Self, Self) -> Self
+pub fn Node::new_subf(Self, Self) -> Self
+pub fn Node::new_to_float(Self) -> Self
+pub fn Node::new_xctrl() -> Self
+pub fn Node::new_xor(Self, Self) -> Self
 pub fn Node::peephole(Self) -> Self
+pub fn Node::peephole_opt(Self) -> Self?
 pub fn Node::pop(Self) -> Unit
 pub fn Node::pop_n(Self, Int) -> Unit
 pub fn Node::print(Self) -> String
-pub fn Node::push(Self) -> Unit
+pub fn Node::push(Self, in_con? : Bool) -> Unit
+pub fn Node::remove_guards(Self, Self) -> Unit
 pub fn Node::reset() -> Unit
 pub fn Node::reverse_names(Self) -> Array[String]
 pub fn Node::set_def(Self, Int, Self?) -> Self?
+pub fn Node::set_type(Self, Type) -> Type?
+pub fn Node::ty(Self) -> Type
+pub fn Node::uid() -> Int
 pub fn Node::unique_name(Self) -> String
 pub fn Node::unkeep(Self) -> Self
-pub fn Node::update(Self, String, Self) -> Self?
+pub fn Node::upcast_(Self, Self, Self, Bool) -> Self?
+pub fn Node::upcast_guard(Self, Self) -> Self
+pub fn Node::update(Self, String, Self) -> Unit
+pub fn Node::widen(Self) -> Self
 pub impl Eq for Node
 
 pub enum NodeKind {
@@ -140,17 +327,43 @@ pub enum NodeKind {
   Stop
   Return
   Constant
+  XCtrl
+  Mem
+  Struct
+  New
+  Load
+  Store
+  Cast
+  ReadOnly
+  ToFloat
+  RoundF32
   Add
+  AddF
   Sub
+  SubF
   Mul
+  MulF
   Div
+  DivF
   Minus
+  MinusF
   Not
+  Shl
+  Shr
+  Sar
+  And
+  Or
+  Xor
   If
+  Never
+  CProj
   Proj
   BoolEq
+  BoolEqF
   BoolLt
+  BoolLtF
   BoolLe
+  BoolLeF
   Region
   Loop
   Phi
@@ -159,7 +372,15 @@ pub enum NodeKind {
 pub impl Eq for NodeKind
 pub impl Show for NodeKind
 
+pub struct Obj {
+  id : Int
+  struct_ : TypeStruct
+  fields : Array[EvalValue]
+}
+pub impl Show for Obj
+
 type Parser
+pub fn Parser::mem_name(Int) -> String
 pub fn Parser::new(String) -> Self
 pub fn Parser::new_with_arg(String, Type) -> Self
 pub fn Parser::parse(Self, show? : Bool) -> Node raise ParseError
@@ -170,21 +391,142 @@ pub enum Type {
   Top
   Ctrl
   XCtrl
-  IntTop
-  IntBot
-  Int(Int64)
-  Tuple(Array[Type])
+  Nil
+  XNil
+  Int(TypeInteger)
+  Flt(TypeFloat)
+  Mem(TypeMem)
+  Ptr(Int)
+  MemPtr(TypeStruct, Int)
+  FunPtr(TypeFunPtr)
+  RPC(TypeRPC)
+  Tuple(Array[Type]?)
 }
+pub fn Type::dual(Self) -> Self
+pub fn Type::gather() -> Array[Self]
+pub fn Type::glb(Self) -> Self
+pub fn Type::hash_code(Self) -> Int
 pub fn Type::is_constant(Self) -> Bool
+pub fn Type::is_final(Self) -> Bool
+pub fn Type::is_high(Self) -> Bool
+pub fn Type::is_high_or_const(Self) -> Bool
+pub fn Type::isa(Self, Self) -> Bool
+pub fn Type::join(Self, Self) -> Self
+pub fn Type::log_size(Self) -> Int
+pub fn Type::make_init(Self) -> Self
+pub fn Type::make_ro(Self) -> Self
+pub fn Type::make_zero(Self) -> Self
 pub fn Type::meet(Self, Self) -> Self
+pub fn Type::mem(Int, t? : Self) -> Self
+pub fn Type::mem_ptr(TypeStruct, nullable? : Bool) -> Self
+pub fn Type::non_zero(Self) -> Self
 pub fn Type::print_to(Self, StringBuilder) -> Unit
+pub fn Type::str(Self) -> String
 pub fn Type::value_exn(Self) -> Int64
 pub impl Eq for Type
 pub impl Show for Type
 
+pub struct TypeFloat {
+  _sz : Int
+  _con : Double
+}
+pub fn TypeFloat::constant(Double) -> Type
+pub fn TypeFloat::is_constant(Self) -> Bool
+pub fn TypeFloat::is_f32(Self) -> Bool
+pub fn TypeFloat::is_high(Self) -> Bool
+pub fn TypeFloat::is_high_or_const(Self) -> Bool
+pub fn TypeFloat::log_size(Self) -> Int
+pub fn TypeFloat::print_to(Self, StringBuilder) -> Unit
+pub fn TypeFloat::str(Self) -> String
+pub fn TypeFloat::to_java_string(Double) -> String
+pub fn TypeFloat::value_exn(Self) -> Double
+pub fn TypeFloat::xmeet(Self, Self) -> Type
+pub impl Eq for TypeFloat
+
+pub struct TypeFunPtr {
+  _nil : Int
+  _sig : Array[Type]?
+  _ret : Type
+  _fidxs : Int64
+  _name : String?
+}
+pub fn TypeFunPtr::dual(Self) -> Self
+pub fn TypeFunPtr::glb(Self) -> Self
+pub fn TypeFunPtr::hash_code(Self) -> Int
+pub fn TypeFunPtr::is_constant(Self) -> Bool
+pub fn TypeFunPtr::is_high(Self) -> Bool
+pub fn TypeFunPtr::make_from_nil(Self, Int) -> Self
+pub fn TypeFunPtr::meet0(Self) -> Self
+pub fn TypeFunPtr::set_name(Self, String?) -> Self
+pub fn TypeFunPtr::str(Self) -> String
+pub fn TypeFunPtr::xmeet(Self, Self) -> Self
+pub impl Eq for TypeFunPtr
+
 pub struct TypeInteger {
+  _min : Int64
+  _max : Int64
 }
 pub fn TypeInteger::constant(Int64) -> Type
+pub fn TypeInteger::is_constant(Self) -> Bool
+pub fn TypeInteger::is_high(Self) -> Bool
+pub fn TypeInteger::is_high_or_const(Self) -> Bool
+pub fn TypeInteger::log_size(Self) -> Int
+pub fn TypeInteger::make(Int64, Int64) -> Type
+pub fn TypeInteger::make_con(Bool, Int64) -> Type
+pub fn TypeInteger::mask(Self) -> Int64
+pub fn TypeInteger::non_zero(Self) -> Type
+pub fn TypeInteger::str(Self) -> String
+pub fn TypeInteger::value_exn(Self) -> Int64
+pub impl Eq for TypeInteger
+
+pub struct TypeMem {
+  _alias : Int
+  _t : Type
+}
+pub impl Eq for TypeMem
+
+pub struct TypeRPC {
+  _any : Bool
+  _rpcs : Array[Int]
+}
+pub fn TypeRPC::dual(Self) -> Self
+pub fn TypeRPC::hash_code(Self) -> Int
+pub fn TypeRPC::is_constant(Self) -> Bool
+pub fn TypeRPC::str(Self) -> String
+pub fn TypeRPC::xmeet(Self, Self) -> Self
+pub impl Eq for TypeRPC
+
+pub struct TypeStruct {
+  _name : String
+  _fields : Array[Field]?
+}
+pub fn TypeStruct::ary_base(Self) -> Int
+pub fn TypeStruct::ary_scale(Self) -> Int
+pub fn TypeStruct::dual(Self) -> Self
+pub fn TypeStruct::find(Self, String) -> Int
+pub fn TypeStruct::find_alias(Self, Int) -> Int
+pub fn TypeStruct::glb(Self) -> Self
+pub fn TypeStruct::hash_code(Self) -> Int
+pub fn TypeStruct::is_ary(Self) -> Bool
+pub fn TypeStruct::is_final(Self) -> Bool
+pub fn TypeStruct::is_fref(Self) -> Bool
+pub fn TypeStruct::make(String, Array[Field]) -> Self
+pub fn TypeStruct::make_ary(Type, Int, Type, Int) -> Self
+pub fn TypeStruct::make_forward(String) -> Self
+pub fn TypeStruct::make_ro(Self) -> Self
+pub fn TypeStruct::meet(Self, Self) -> Self
+pub fn TypeStruct::offset(Self, Int) -> Int
+pub fn TypeStruct::str(Self) -> String
+pub impl Eq for TypeStruct
+pub impl Show for TypeStruct
+
+pub struct Var {
+  _idx : Int
+  _name : String
+  _type : Type
+  _final : Bool
+}
+pub impl Eq for Var
 
 // Type aliases
 
