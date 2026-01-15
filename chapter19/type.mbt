@@ -78,7 +78,6 @@ pub struct TypeRPC {
   _rpcs : Array[Int]
 } derive(Eq)
 
-
 ///|
 pub let bottom : Type = Bot
 
@@ -273,7 +272,11 @@ pub fn Type::gather() -> Array[Type] {
 
 ///|
 fn nil_xmeet0(a : Int, b : Int) -> Int {
-  if a > b { a } else { b }
+  if a > b {
+    a
+  } else {
+    b
+  }
 }
 
 ///|
@@ -288,20 +291,32 @@ fn nil_is_high(nil : Int) -> Bool {
 
 ///|
 fn nil_q(nil : Int) -> String {
-  if nil == 1 || nil == 2 { "" } else { "?" }
+  if nil == 1 || nil == 2 {
+    ""
+  } else {
+    "?"
+  }
 }
 
 ///|
 fn nil_x(nil : Int) -> String {
-  if nil_is_high(nil) { "~" } else { "" }
+  if nil_is_high(nil) {
+    "~"
+  } else {
+    ""
+  }
 }
 
 ///|
 pub fn Type::mem(mem_alias : Int, t? : Type = top) -> Type {
   if mem_alias == 0 {
-    if t == top { type_mem_top }
-    else if t == bottom { type_mem_bot }
-    else { panic() }
+    if t == top {
+      type_mem_top
+    } else if t == bottom {
+      type_mem_bot
+    } else {
+      panic()
+    }
   } else {
     Mem({ _alias: mem_alias, _t: t })
   }
@@ -515,7 +530,11 @@ fn type_nmeet(lhs : Type, rhs : Type) -> Type {
       } else if n0 == 1 {
         type_make_from_nil(other, nil_xmeet0(n0, n1))
       } else if n0 == 2 {
-        if n1 == 3 { type_ptr_ptr } else { type_ptr_nptr }
+        if n1 == 3 {
+          type_ptr_ptr
+        } else {
+          type_ptr_nptr
+        }
       } else {
         type_ptr_ptr
       }
@@ -536,6 +555,7 @@ fn type_nmeet(lhs : Type, rhs : Type) -> Type {
 }
 
 ///|
+
 ///|
 let _meet_depth : Ref[Int] = Ref::{ val: 0 }
 
@@ -563,10 +583,11 @@ fn _dbg_tag(t : Type) -> String {
 pub fn Type::meet(self : Type, other : Type) -> Type {
   _meet_depth.val = _meet_depth.val + 1
   if _meet_depth.val > 2000 {
-    println("Type.meet recursion: " + _dbg_tag(self) + " meet " + _dbg_tag(other))
+    println(
+      "Type.meet recursion: " + _dbg_tag(self) + " meet " + _dbg_tag(other),
+    )
     panic()
   }
-
   let res = if self == other {
     self
   } else {
@@ -588,11 +609,18 @@ pub fn Type::meet(self : Type, other : Type) -> Type {
       (Ctrl | XCtrl, Ctrl | XCtrl) => Ctrl
       (Int(i0), Int(i1)) =>
         Int({
-          _min: if i0._min < i1._min { i0._min } else { i1._min },
-          _max: if i0._max > i1._max { i0._max } else { i1._max },
+          _min: if i0._min < i1._min {
+            i0._min
+          } else {
+            i1._min
+          },
+          _max: if i0._max > i1._max {
+            i0._max
+          } else {
+            i1._max
+          },
         })
       (Flt(f0), Flt(f1)) => TypeFloat::xmeet(f0, f1)
-
       (Mem(m0), Mem(m1)) =>
         if self == type_mem_top {
           Mem(m1)
@@ -604,12 +632,10 @@ pub fn Type::meet(self : Type, other : Type) -> Type {
           let alias_id = if m0._alias == m1._alias { m0._alias } else { 0 }
           Mem({ _alias: alias_id, _t: m0._t.meet(m1._t) })
         }
-
       (Ptr(n0), Ptr(n1)) => Ptr(nil_xmeet0(n0, n1))
       (MemPtr(obj0, n0), MemPtr(obj1, n1)) =>
         MemPtr(obj0.meet(obj1), nil_xmeet0(n0, n1))
       (FunPtr(fp0), FunPtr(fp1)) => FunPtr(fp0.xmeet(fp1))
-
       (Tuple(ts0), Tuple(ts1)) =>
         match (ts0, ts1) {
           (None, _) => other
@@ -625,17 +651,13 @@ pub fn Type::meet(self : Type, other : Type) -> Type {
       // Mismatched nil-able meets
       (Ptr(_) | MemPtr(_, _) | FunPtr(_), Ptr(_) | MemPtr(_, _) | FunPtr(_)) =>
         type_nmeet(self, other)
-
       (RPC(r0), RPC(r1)) => RPC(r0.xmeet(r1))
-
       _ => bottom
     }
   }
-
   _meet_depth.val = _meet_depth.val - 1
   res
 }
-
 
 ///|
 pub fn Type::hash_code(self : Type) -> Int {
@@ -694,10 +716,10 @@ pub fn Type::print_to(self : Type, sb : StringBuilder) -> Unit {
         mem._t.print_to(sb)
       }
     }
-    Tuple(types) => {
+    Tuple(types) =>
       match types {
         None => sb.write_string("[TOP]")
-        Some(ts) => {
+        Some(ts) =>
           if ts.length() == 0 {
             sb.write_string("[BOT]")
           } else {
@@ -712,9 +734,7 @@ pub fn Type::print_to(self : Type, sb : StringBuilder) -> Unit {
             }
             sb.write_string("]")
           }
-        }
       }
-    }
   }
 }
 
@@ -745,7 +765,7 @@ pub fn Type::str(self : Type) -> String {
       let strs = ["~ptr", "~nptr", "nptr", "ptr"]
       strs[nil]
     }
-    MemPtr(obj, nil) => {
+    MemPtr(obj, nil) =>
       if self == type_mem_ptr_voidptr {
         "*void"
       } else if self == type_mem_ptr_bot {
@@ -753,7 +773,6 @@ pub fn Type::str(self : Type) -> String {
       } else {
         nil_x(nil) + "*" + obj.str() + nil_q(nil)
       }
-    }
     FunPtr(fp) => fp.str()
     RPC(rpc) => rpc.str()
     Tuple(_) => {
@@ -763,6 +782,7 @@ pub fn Type::str(self : Type) -> String {
     }
   }
 }
+
 ///|
 pub impl Show for Type with output(self, logger) {
   let sb = StringBuilder::new()
@@ -1168,8 +1188,7 @@ pub fn TypeStruct::meet(self : TypeStruct, other : TypeStruct) -> TypeStruct {
         let fields : Array[Field] = []
         for i, f0 in f0s {
           let f1 = f1s[i]
-          if f0._fname != f1._fname ||
-            f0._alias != f1._alias {
+          if f0._fname != f1._fname || f0._alias != f1._alias {
             return type_struct_bot
           }
           fields.push(
@@ -1327,7 +1346,6 @@ pub fn TypeStruct::make_forward(name : String) -> TypeStruct {
   { _name: name, _fields: None }
 }
 
-
 ///|
 pub fn TypeRPC::is_constant(self : TypeRPC) -> Bool {
   !self._any && self._rpcs.length() == 1
@@ -1390,12 +1408,10 @@ pub fn TypeRPC::xmeet(self : TypeRPC, other : TypeRPC) -> TypeRPC {
   let rhs = other._rpcs.copy()
   rhs.sort()
   rhs.dedup()
-
   if lhs == rhs {
     // Equal sets with opposite _any collapse to BOT ($[ALL]).
     return { _any: true, _rpcs: [] }
   }
-
   if self._any && other._any {
     // Union of complements => complement of intersection.
     let out : Array[Int] = []
@@ -1414,7 +1430,6 @@ pub fn TypeRPC::xmeet(self : TypeRPC, other : TypeRPC) -> TypeRPC {
     }
     return { _any: true, _rpcs: out }
   }
-
   if !self._any && !other._any {
     // Union of finite sets.
     let out : Array[Int] = []
@@ -1464,12 +1479,17 @@ pub fn TypeFunPtr::is_high(self : TypeFunPtr) -> Bool {
 
 ///|
 pub fn TypeFunPtr::is_constant(self : TypeFunPtr) -> Bool {
-  (self._nil == 2 && self._fidxs.popcnt() == 1) || (self._nil == 3 && self._fidxs == 0L)
+  (self._nil == 2 && self._fidxs.popcnt() == 1) ||
+  (self._nil == 3 && self._fidxs == 0L)
 }
 
 ///|
 pub fn TypeFunPtr::make_from_nil(self : TypeFunPtr, nil : Int) -> TypeFunPtr {
-  if nil == self._nil { self } else { { ..self, _nil: nil } }
+  if nil == self._nil {
+    self
+  } else {
+    { ..self, _nil: nil }
+  }
 }
 
 ///|
@@ -1483,7 +1503,13 @@ pub fn TypeFunPtr::dual(self : TypeFunPtr) -> TypeFunPtr {
     Type::Tuple(ts) => ts
     _ => panic()
   }
-  { ..self, _nil: nil_dual0(self._nil), _sig: sig_dual, _ret: self._ret.dual(), _fidxs: self._fidxs ^ -1L }
+  {
+    ..self,
+    _nil: nil_dual0(self._nil),
+    _sig: sig_dual,
+    _ret: self._ret.dual(),
+    _fidxs: self._fidxs ^ -1L,
+  }
 }
 
 ///|
@@ -1494,7 +1520,9 @@ pub fn TypeFunPtr::glb(self : TypeFunPtr) -> TypeFunPtr {
 ///|
 pub fn TypeFunPtr::hash_code(self : TypeFunPtr) -> Int {
   let mix = fn(v : Int) -> Int { v ^ (v << 17) ^ (v >> 13) }
-  let mut h = mix(0x5000 ^ (self._nil << 3) ^ self._ret.hash_code() ^ self._fidxs.hash())
+  let mut h = mix(
+    0x5000 ^ (self._nil << 3) ^ self._ret.hash_code() ^ self._fidxs.hash(),
+  )
   match self._sig {
     None => h = mix(h ^ 0x12345)
     Some(ts) =>
@@ -1512,7 +1540,11 @@ pub fn TypeFunPtr::xmeet(self : TypeFunPtr, other : TypeFunPtr) -> TypeFunPtr {
     _ => panic()
   }
   {
-    _nil: if self._nil > other._nil { self._nil } else { other._nil },
+    _nil: if self._nil > other._nil {
+      self._nil
+    } else {
+      other._nil
+    },
     _sig: sig,
     _ret: self._ret.meet(other._ret),
     _fidxs: self._fidxs | other._fidxs,
