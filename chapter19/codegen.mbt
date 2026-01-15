@@ -59,10 +59,11 @@ pub fn CodeGen::parse(
 }
 
 ///|
-pub fn CodeGen::opto(self : CodeGen) -> CodeGen raise ParseError {
+pub fn CodeGen::opto(self : CodeGen) -> CodeGen {
   self._phase = Some(Opto)
-  // Reuse the existing chapter pipeline: IterPeeps + error checking + CFG build.
-  self._stop = self._stop.iterate()
+  // refs/simple runs worklist peepholes here; keep the same phase split even
+  // though this chapter currently has no explicit CodeGen context.
+  self._stop = IterPeeps::iterate(self._stop)
   self
 }
 
@@ -97,8 +98,11 @@ pub fn CodeGen::inst_select(
 ///|
 pub fn CodeGen::gcm(self : CodeGen, _show? : Bool = false) -> CodeGen {
   self._phase = Some(Schedule)
-  // The existing chapter implementation performs scheduling inside Node::iterate.
-  // Keep this as a no-op placeholder for now (refs/simple has an explicit phase).
+  if !scheduled.val {
+    // Build the loop tree/fix never-exit loops, then schedule.
+    GlobalCodeMotion::fix_loops(self._stop)
+    GlobalCodeMotion::build_cfg(self._stop)
+  }
   self
 }
 
