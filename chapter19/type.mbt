@@ -1013,7 +1013,13 @@ pub fn TypeFloat::print_to(self : TypeFloat, sb : StringBuilder) -> Unit {
   } else if self._sz == 64 {
     sb.write_string("FltBot")
   } else {
-    sb.write_string(TypeFloat::to_java_string(self._con))
+    let base = TypeFloat::to_java_string(self._con)
+    if self.is_f32() {
+      sb.write_string(base)
+      sb.write_string("f")
+    } else {
+      sb.write_string(base)
+    }
   }
 }
 

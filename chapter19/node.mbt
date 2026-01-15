@@ -45,6 +45,7 @@ pub enum NodeKind {
   Loop
   Phi
   Scope
+  Mach
 } derive(Eq, Show)
 
 ///|
@@ -85,6 +86,7 @@ pub struct Node {
   mut _memop_alias : Int
   mut _memop_init : Bool
   mut _struct_ts : TypeStruct?
+  mut _mach_op : String
 }
 
 ///|
@@ -198,6 +200,7 @@ fn Node::new_raw(kind : NodeKind, inputs : Array[Node?]) -> Node {
     _memop_alias: 0,
     _memop_init: false,
     _struct_ts: None,
+    _mach_op: "",
   }
   for input in node._inputs {
     match input {
@@ -577,6 +580,7 @@ pub fn Node::label(self : Node) -> String {
     Loop => "Loop"
     Phi => "Phi_\{self._phi_label}"
     Scope => "Scope"
+    Mach => self._mach_op
   }
 }
 
@@ -1424,6 +1428,11 @@ pub fn Node::compute(self : Node) -> Type {
         None => Tuple(Some(self._start_args))
       }
     Stop | Scope => bottom
+    Mach =>
+      match self._type {
+        Some(t) => t
+        None => bottom
+      }
     Mem => type_mem_bot
     Struct => bottom
     Return => {
@@ -3337,6 +3346,18 @@ fn Node::_print1(
         match input {
           Some(n) => n._print0(sb, visited)
           None => sb.write_string("____")
+        }
+      }
+      sb.write_string(")")
+    }
+    Mach => {
+      sb.write_string("(")
+      sb.write_string(self._mach_op)
+      for i = 1; i < self.n_ins(); i = i + 1 {
+        sb.write_string(",")
+        match self.input(i) {
+          Some(n) => n._print0(sb, visited)
+          None => sb.write_string(" ---")
         }
       }
       sb.write_string(")")

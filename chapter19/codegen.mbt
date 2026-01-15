@@ -80,7 +80,7 @@ pub fn CodeGen::type_check(self : CodeGen) -> CodeGen raise ParseError {
 ///|
 pub fn CodeGen::inst_select(
   self : CodeGen,
-  _cpu : String,
+  cpu : String,
   calling_conv : String,
 ) -> CodeGen {
   self._phase = Some(InstructionSelection)
@@ -91,7 +91,14 @@ pub fn CodeGen::inst_select(
   } else {
     None
   }
-  // TODO(chapter19): machine ports + instruction selection.
+  // Instruction selection rewrites the graph, so (re)build the schedule afterwards.
+  scheduled.val = false
+  if cpu == "x86_64_v2" {
+    inst_select_x86_64_v2(self._stop)
+  } else {
+    // TODO(chapter19): additional machine ports.
+    ()
+  }
   self
 }
 
