@@ -131,7 +131,7 @@ test "chapter05: true literal" {
 ///|
 test "chapter05: half def" {
   expect_parse_error(
-    "if( arg==1 ) int b=2; return b;", "Cannot define a new name on one arm of an if",
+    "if( arg==1 ) int b=2; return b;", "Cannot define a 'b' on one arm of an if",
   )
 }
 
@@ -145,7 +145,7 @@ test "chapter05: half def2" {
 ///|
 test "chapter05: regress1" {
   expect_parse_error(
-    "if(arg==2) int a=1; else int b=2; return a;", "Cannot define a new name on one arm of an if",
+    "if(arg==2) int a=1; else int b=2; return a;", "Cannot define a 'a' on one arm of an if",
   )
 }
 

@@ -242,6 +242,18 @@ pub let type_tuple_if_true : Type = Tuple(Some([control, xcontrol]))
 pub let type_tuple_if_false : Type = Tuple(Some([xcontrol, control]))
 
 ///|
+/// Match refs/simple `TypeTuple.RET`: [Ctrl, MemBot, Bottom]
+pub let type_tuple_ret : Type = Tuple(Some([control, type_mem_bot, bottom]))
+
+///|
+/// Match refs/simple `TypeRPC.BOT` ($[ALL])
+pub let type_rpc_bot : Type = RPC({ _any: true, _rpcs: [] })
+
+///|
+/// Match refs/simple `TypeFunPtr.BOT`
+pub let type_funptr_bot : Type = FunPtr({ _nil: 3, _sig: Some([]), _ret: bottom, _fidxs: -1L, _name: None })
+
+///|
 pub fn Type::gather() -> Array[Type] {
   let ts : Array[Type] = []
   ts.push(bottom)
@@ -1484,6 +1496,59 @@ pub fn TypeFunPtr::is_high(self : TypeFunPtr) -> Bool {
 }
 
 ///|
+pub fn TypeFunPtr::not_null(self : TypeFunPtr) -> Bool {
+  // Match refs/simple: nullable when nil is 0/3.
+  self._nil == 1 || self._nil == 2
+}
+
+///|
+pub fn TypeFunPtr::arg(self : TypeFunPtr, i : Int) -> Type {
+  match self._sig {
+    Some(ts) => ts[i]
+    None => panic()
+  }
+}
+
+///|
+pub fn TypeFunPtr::nargs(self : TypeFunPtr) -> Int {
+  match self._sig {
+    Some(ts) => ts.length()
+    None => 0
+  }
+}
+
+///|
+pub fn TypeFunPtr::ret(self : TypeFunPtr) -> Type {
+  self._ret
+}
+
+///|
+pub fn TypeFunPtr::fidxs(self : TypeFunPtr) -> Int64 {
+  self._fidxs
+}
+
+///|
+pub fn TypeFunPtr::make_from_ret(self : TypeFunPtr, ret : Type) -> TypeFunPtr {
+  if ret == self._ret {
+    self
+  } else {
+    { ..self, _ret: ret, _name: None }
+  }
+}
+
+///|
+pub fn TypeFunPtr::make_from_fidx(self : TypeFunPtr, fidx : Int) -> TypeFunPtr {
+  // Match refs/simple: makeFrom(fidx) always yields a not-null constant funptr.
+  { ..self, _nil: 2, _fidxs: 1L << fidx, _name: None }
+}
+
+///|
+pub fn TypeFunPtr::next_fidx(fidxs : Int64) -> Int64 {
+  // Iterate low-bit sets: x & (x-1)
+  fidxs.land(fidxs - 1L)
+}
+
+///|
 pub fn TypeFunPtr::is_constant(self : TypeFunPtr) -> Bool {
   (self._nil == 2 && self._fidxs.popcnt() == 1) ||
   (self._nil == 3 && self._fidxs == 0L)
@@ -1577,35 +1642,31 @@ pub fn TypeFunPtr::str(self : TypeFunPtr) -> String {
   let sb = StringBuilder::new()
   sb.write_string(nil_x(self._nil))
   sb.write_string("{ ")
-  match self._name {
-    Some(name) => sb.write_string(name)
-    None => {
-      match self._sig {
-        None => ()
-        Some(ts) =>
-          for t in ts {
-            t.print_to(sb)
-            sb.write_string(" ")
-          }
+  // Match refs/simple: printing never uses a debug name; names live on Fun nodes.
+  match self._sig {
+    None => ()
+    Some(ts) =>
+      for t in ts {
+        t.print_to(sb)
+        sb.write_string(" ")
       }
-      sb.write_string("-> ")
-      self._ret.print_to(sb)
-      sb.write_string(" #")
-      if self.is_high() {
-        sb.write_string("~")
-      }
-      let fidxs = if self.is_high() { self._fidxs ^ -1L } else { self._fidxs }
-      if fidxs == -1L {
-        sb.write_string("ALL")
-      } else if fidxs != 0L {
-        if fidxs.popcnt() == 1 {
-          sb.write_string(fidxs.ctz().to_string())
-        } else {
-          // Rare in tests; keep a compact form.
-          sb.write_string("b")
-          sb.write_string(fidxs.to_string(radix=2))
-        }
-      }
+  }
+  sb.write_string("-> ")
+  self._ret.print_to(sb)
+  sb.write_string(" #")
+  if self.is_high() {
+    sb.write_string("~")
+  }
+  let fidxs = if self.is_high() { self._fidxs ^ -1L } else { self._fidxs }
+  if fidxs == -1L {
+    sb.write_string("ALL")
+  } else if fidxs != 0L {
+    if fidxs.popcnt() == 1 {
+      sb.write_string(fidxs.ctz().to_string())
+    } else {
+      // Rare in tests; keep a compact form.
+      sb.write_string("b")
+      sb.write_string(fidxs.to_string(radix=2))
     }
   }
   sb.write_string("}")

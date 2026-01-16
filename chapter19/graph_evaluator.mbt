@@ -254,7 +254,7 @@ fn GraphEvaluator::_evaluate(
           },
         )
       Return =>
-        return { typ: Value, value: self._get_value(ctrl_node.input_exn(1)) }
+        return { typ: Value, value: self._get_value(ctrl_node.input_exn(2)) }
       CProj | Proj => GraphEvaluator::_find_control(ctrl_node)
       XCtrl => None
       _ => panic()

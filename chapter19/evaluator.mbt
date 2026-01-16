@@ -735,7 +735,7 @@ fn Evaluator::run(
       }
       Return => {
         self.exec_anchor(ctrl_node)
-        return Value(self.get_value(ctrl_node.input_exn(1)))
+        return Value(self.get_value(ctrl_node.input_exn(2)))
       }
       CProj => {
         self.exec_anchor(ctrl_node)

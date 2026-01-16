@@ -169,6 +169,26 @@ pub fn IterPeeps::add_all_nodes(ary : Array[Node]) -> Unit {
 
 ///|
 pub fn IterPeeps::iterate(stop : Node) -> Node {
+  let visited : Array[Bool] = []
+  fn seed(visited : Array[Bool], node : Node) -> Unit {
+    let nid = node._nid
+    while visited.length() <= nid {
+      visited.push(false)
+    }
+    if visited[nid] {
+      return
+    }
+    visited[nid] = true
+    ignore(work.push(Some(node)))
+    for def in node._inputs {
+      match def {
+        Some(n) => seed(visited, n)
+        None => ()
+      }
+    }
+  }
+  seed(visited, stop)
+
   let mut n = work.pop()
   while n is Some(node) {
     if !node.is_dead() {

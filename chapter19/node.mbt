@@ -3,6 +3,11 @@ pub enum NodeKind {
   Start
   Stop
   Return
+  Fun
+  Call
+  CallEnd
+  Parm
+  FRef
   Constant
   XCtrl
   Mem
@@ -54,6 +59,7 @@ pub struct Var {
   _name : String
   _type : Type
   _final : Bool
+  _fref : Bool
 } derive(Eq)
 
 ///|
@@ -75,12 +81,25 @@ pub struct Node {
   mut _vars : Array[Var]
   mut _lex_size : Array[Int]
   mut _in_cons : Array[Bool]
+  mut _in_funs : Array[Bool]
   mut _guards : Array[Node]
   mut _proj_idx : Int
   mut _proj_label : String
   mut _start_args : Array[Type]
   mut _alias_starts : Map[String, Int]
   mut _phi_label : String
+  mut _parm_idx : Int
+  mut _folding : Bool
+  mut _fun_sig : TypeFunPtr?
+  mut _fun_name : String?
+  mut _fun_ret : Node?
+  mut _ret_fun : Node?
+  mut _ret_mt : Type
+  mut _ret_ti : Bool
+  mut _ret_tf : Bool
+  mut _ret_tp : Bool
+  mut _ret_tn : Bool
+  mut _fref_var : Var?
   mut _declared_type : Type
   mut _memop_name : String
   mut _memop_alias : Int
@@ -104,6 +123,11 @@ let _unique_id : Ref[Int] = Ref::{ val: 1 }
 ///|
 pub let start : Ref[Node] = Ref::{
   val: Node::new_start([control, type_integer_bot]),
+}
+
+///|
+pub let stop : Ref[Node] = Ref::{
+  val: Node::new_stop(),
 }
 
 ///|
@@ -189,12 +213,25 @@ fn Node::new_raw(kind : NodeKind, inputs : Array[Node?]) -> Node {
     _vars: [],
     _lex_size: [],
     _in_cons: [],
+    _in_funs: [],
     _guards: [],
     _proj_idx: 0,
     _proj_label: "",
     _start_args: [],
     _alias_starts: Map::new(),
     _phi_label: "",
+    _parm_idx: 0,
+    _folding: false,
+    _fun_sig: None,
+    _fun_name: None,
+    _fun_ret: None,
+    _ret_fun: None,
+    _ret_mt: top,
+    _ret_ti: false,
+    _ret_tf: false,
+    _ret_tp: false,
+    _ret_tn: false,
+    _fref_var: None,
     _declared_type: bottom,
     _memop_name: "",
     _memop_alias: 0,
@@ -224,20 +261,76 @@ pub fn Node::new_stop() -> Node {
   Node::new_raw(Stop, [])
 }
 
+
 ///|
-pub fn Node::new_return0(ctrl : Node?, data : Node) -> Node {
-  Node::new_raw(Return, [ctrl, Some(data)])
+pub fn Node::new_fun(sig : TypeFunPtr, start : Node) -> Node {
+  let node = Node::new_raw(Fun, [None, Some(start)])
+  node._fun_sig = Some(sig)
+  node
 }
 
 ///|
-pub fn Node::new_return(ctrl : Node?, data : Node, scope : Node) -> Node {
-  let node = Node::new_raw(Return, [ctrl, Some(data)])
+pub fn Node::new_parm(
+  label : String,
+  idx : Int,
+  declared_type : Type,
+  fun : Node,
+  init : Node,
+) -> Node {
+  let node = Node::new_raw(Parm, [Some(fun), Some(init)])
+  node._phi_label = label
+  node._parm_idx = idx
+  node._declared_type = declared_type
+  node
+}
+
+///|
+pub fn Node::new_call(ctrl : Node, mem : Node, args : Array[Node], fptr : Node) -> Node {
+  let inputs : Array[Node?] = [Some(ctrl), Some(mem)]
+  for a in args {
+    inputs.push(Some(a))
+  }
+  inputs.push(Some(fptr))
+  Node::new_raw(Call, inputs)
+}
+
+///|
+pub fn Node::new_call_end(call : Node) -> Node {
+  Node::new_raw(CallEnd, [Some(call)])
+}
+
+///|
+pub fn Node::new_return0(ctrl : Node, data : Node) -> Node {
+  // No associated function; used by loop forcing (see GlobalCodeMotion.fix_loops).
+  let mem = Node::new_constant(type_mem_bot).peephole()
+  let rpc = Node::new_constant(type_rpc_bot).peephole()
+  let node = Node::new_raw(Return, [Some(ctrl), Some(mem), Some(data), Some(rpc)])
+  node._ret_fun = None
+  node
+}
+
+///|
+pub fn Node::new_return(ctrl : Node, mem : Node, data : Node, rpc : Node, fun : Node) -> Node {
+  let node = Node::new_raw(Return, [Some(ctrl), Some(mem), Some(data), Some(rpc)])
+  node._ret_fun = Some(fun)
+  node
+}
+
+///|
+pub fn Node::new_return_scope(ctrl : Node, data : Node, scope : Node) -> Node {
+  // Return node for the legacy single-function program shape (pre chapter19 multi-fun).
+  // Keep memory slices live by copying the current alias state out of the Scope's Mem.
   if scope.kind != Scope {
     panic()
   }
-  let mem = scope.mem()
-  for i = 2; i < mem.n_ins(); i = i + 1 {
-    ignore(node.add_def(mem.input(i)))
+  let mem = Node::new_constant(type_mem_bot).peephole()
+  let rpc = Node::new_constant(type_rpc_bot).peephole()
+  let node = Node::new_raw(Return, [Some(ctrl), Some(mem), Some(data), Some(rpc)])
+  node._ret_fun = None
+
+  let scope_mem = scope.mem()
+  for i = 2; i < scope_mem.n_ins(); i = i + 1 {
+    ignore(node.add_def(scope_mem.input(i)))
   }
   node
 }
@@ -246,6 +339,14 @@ pub fn Node::new_return(ctrl : Node?, data : Node, scope : Node) -> Node {
 pub fn Node::new_constant(con : Type) -> Node {
   let node = Node::new_raw(Constant, [Some(start.val)])
   node._con = Some(con)
+  node
+}
+
+
+///|
+pub fn Node::new_fref(v : Var) -> Node {
+  let node = Node::new_raw(FRef, [Some(start.val)])
+  node._fref_var = Some(v)
   node
 }
 
@@ -489,6 +590,13 @@ pub fn Node::new_region(ctrl0 : Node?, ctrl1 : Node?) -> Node {
 }
 
 ///|
+/// Create an in-progress Region merge with only the idom slot and the trailing null placeholder.
+/// Matches refs/simple RegionNode init shape used for multi-exit Returns.
+pub fn Node::new_region_in_progress() -> Node {
+  Node::new_raw(Region, [None, None])
+}
+
+///|
 pub fn Node::new_loop(entry : Node?) -> Node {
   Node::new_raw(Loop, [None, entry, None])
 }
@@ -530,6 +638,27 @@ pub fn Node::label(self : Node) -> String {
     Start => "Start"
     Stop => "Stop"
     Return => "Return"
+    Fun =>
+      match self._fun_name {
+        Some(n) => n
+        None => "$fun"
+      }
+    Call => "Call"
+    CallEnd => "CallEnd"
+    Parm => {
+      if self._phi_label == "[]" {
+        "ary"
+      } else if self._phi_label == "#" {
+        "len"
+      } else {
+        self._phi_label
+      }
+    }
+    FRef =>
+      match self._fref_var {
+        Some(v) => "FRef_\{v._name}"
+        None => "FRef"
+      }
     Constant =>
       match self._con {
         Some(con) => "\{con}"
@@ -569,7 +698,7 @@ pub fn Node::label(self : Node) -> String {
     If => "If"
     Never => "Never"
     CProj => self._proj_label
-    Proj => self._proj_label
+    Proj => if self._proj_label == "" { "Proj" } else { self._proj_label }
     BoolEq => "EQ"
     BoolEqF => "EQF"
     BoolLt => "LT"
@@ -663,7 +792,7 @@ pub fn Node::is_unused(self : Node) -> Bool {
 ///|
 pub fn Node::is_cfg(self : Node) -> Bool {
   match self.kind {
-    Start | Stop | Return | If | Never | Region | Loop | CProj | XCtrl => true
+    Start | Stop | Return | Fun | Call | CallEnd | If | Never | Region | Loop | CProj | XCtrl => true
     _ => false
   }
 }
@@ -674,7 +803,7 @@ pub fn Node::is_pinned(self : Node) -> Bool {
     return true
   }
   match self.kind {
-    Phi | Proj | New | Cast => true
+    Phi | Parm | Proj | New | Cast => true
     Constant => self == zero.val
     _ => false
   }
@@ -683,7 +812,7 @@ pub fn Node::is_pinned(self : Node) -> Bool {
 ///|
 pub fn Node::block_head(self : Node) -> Bool {
   match self.kind {
-    Start | Stop | Region | Loop | CProj => true
+    Start | Stop | Fun | Region | Loop | CallEnd | CProj => true
     _ => false
   }
 }
@@ -692,7 +821,14 @@ pub fn Node::block_head(self : Node) -> Bool {
 pub fn Node::cfg0(self : Node) -> Node {
   match self.kind {
     Start => self
-    Proj => self.input_exn(0).cfg0()
+    Proj => {
+      let base = self.input_exn(0)
+      if base.is_cfg() {
+        base
+      } else {
+        base.cfg0()
+      }
+    }
     _ => self.input_exn(0)
   }
 }
@@ -704,7 +840,10 @@ pub fn Node::ctrl(self : Node) -> Node {
 
 ///|
 pub fn Node::expr(self : Node) -> Node {
-  self.input_exn(1)
+  match self.kind {
+    Return => self.input_exn(2)
+    _ => self.input_exn(1)
+  }
 }
 
 ///|
@@ -733,11 +872,17 @@ pub fn Node::set_def(self : Node, idx : Int, new_def : Node?) -> Node? {
     Some(n) => n.add_use(Some(self))
     None => ()
   }
+  self._inputs[idx] = new_def
   match old_def {
-    Some(old) => if old.del_use(Some(self)) { old.kill() }
+    Some(old) => {
+      let old_work = IterPeeps::add(old)
+      if old_work.del_use(Some(self)) {
+        old_work.kill()
+      }
+    }
     None => ()
   }
-  self._inputs[idx] = new_def
+  self.move_deps_to_worklist()
   new_def
 }
 
@@ -787,6 +932,7 @@ pub fn Node::pop_n(self : Node, n : Int) -> Unit {
 ///|
 pub fn Node::kill(self : Node) -> Unit {
   self.unlock()
+  self.move_deps_to_worklist()
   if !self.is_unused() {
     panic()
   }
@@ -851,6 +997,7 @@ fn Node::subsume(self : Node, nnn : Node) -> Unit {
         }
         n._inputs[idx] = Some(nnn)
         nnn.add_use(Some(n))
+        IterPeeps::add_all(n._outputs)
       }
     }
   }
@@ -872,7 +1019,8 @@ fn Node::eq_gvn(self : Node, other : Node) -> Bool {
   match self.kind {
     Constant => self._con == other._con
     CProj | Proj => self._proj_idx == other._proj_idx
-    Region | Loop | Phi => !self.in_progress()
+    Fun | Call | CallEnd | FRef | Mem => false
+    Region | Loop | Phi | Parm => !self.in_progress()
     New => false
     Load | Store => self._memop_alias == other._memop_alias
     _ => true
@@ -1102,10 +1250,10 @@ pub fn Node::widen(self : Node) -> Node {
 
 ///|
 fn Node::all_cons(self : Node, dep : Node) -> Bool {
-  if self.kind == Phi {
+  if self.kind == Phi || self.kind == Parm {
     match self.input(0) {
       Some(region) =>
-        if region.kind != Region && region.kind != Loop {
+        if region.kind != Region && region.kind != Loop && region.kind != Fun {
           return false
         } else {
           ignore(self.add_dep(dep))
@@ -1171,11 +1319,22 @@ pub fn Node::move_deps_to_worklist(self : Node) -> Unit {
 ///|
 fn Node::in_progress(self : Node) -> Bool {
   match self.kind {
+    Fun => self.n_ins() > 1 && self.input(1) == Some(start.val)
+    Parm =>
+      match self.input(0) {
+        Some(fun) if fun.kind == Fun => fun.in_progress()
+        _ => false
+      }
     Region | Loop | Phi =>
       if self.n_ins() > 0 {
         self.input(self.n_ins() - 1) is None
       } else {
         false
+      }
+    Return =>
+      match self.input(0) {
+        Some(r) if r.kind == Region => r.in_progress()
+        _ => false
       }
     _ => false
   }
@@ -1209,6 +1368,7 @@ fn Node::copy(self : Node, lhs : Node, rhs : Node) -> Node {
 fn Node::idepth(self : Node) -> Int {
   match self.kind {
     Start => 0
+    Fun => { self._idepth = 1; 1 }
     _ =>
       if self._idepth != 0 {
         self._idepth
@@ -1276,6 +1436,7 @@ fn Node::idom(self : Node) -> Node? {
   match self.kind {
     Start | Stop => None
     Region => self.region_idom()
+    Fun => self.input(1)
     Loop => self.input(1)
     _ => self.input(0)
   }
@@ -1303,7 +1464,7 @@ fn Node::loop_depth(self : Node) -> Int {
       self._loop_depth = 1
       1
     }
-    Region =>
+    Region | Fun =>
       match self.input(1) {
         Some(entry) => {
           let d = entry.loop_depth()
@@ -1416,7 +1577,7 @@ fn Node::force_exit(self : Node, stop : Node) -> Unit {
   let t = Node::new_cproj(iff, 0, "True")
   let f = Node::new_cproj(iff, 1, "False")
   ignore(self.set_def(2, Some(f)))
-  ignore(stop.add_return(Node::new_return0(Some(t), zero.val)))
+  ignore(stop.add_return(Node::new_return0(t, zero.val)))
 }
 
 ///|
@@ -1428,6 +1589,25 @@ pub fn Node::compute(self : Node) -> Type {
         None => Tuple(Some(self._start_args))
       }
     Stop | Scope => bottom
+    Fun => control
+    Call =>
+      match self.input(0) {
+        Some(ctrl) => ctrl.ty()
+        None => bottom
+      }
+    CallEnd =>
+      match self.input(0) {
+        Some(call) if call.kind == Call => {
+          let fptr_ty = call.input_exn(call.n_ins() - 1).add_dep(self).ty()
+          let ret = match fptr_ty {
+            FunPtr(tfp) => tfp.ret()
+            _ => bottom
+          }
+          Tuple(Some([call.ty(), type_mem_bot, ret]))
+        }
+        _ => type_tuple_ret.dual()
+      }
+    FRef => bottom
     Mach =>
       match self._type {
         Some(t) => t
@@ -1436,15 +1616,37 @@ pub fn Node::compute(self : Node) -> Type {
     Mem => type_mem_bot
     Struct => bottom
     Return => {
-      let ctrl_ty = match self._inputs[0] {
-        Some(n) => n.ty()
-        None => bottom
+      // Match refs/simple ReturnNode.compute(): TypeTuple.RET while in progress,
+      // dual when the owning function is dead, else [ctrl, mem, expr].
+      let in_progress = match self.input(0) {
+        Some(r) if r.kind == Region => r.in_progress()
+        _ => false
       }
-      let expr_ty = match self._inputs[1] {
-        Some(n) => n.ty()
-        None => bottom
+      if in_progress {
+        type_tuple_ret
+      } else {
+        let fun_dead = match self._ret_fun {
+          Some(fun) => fun.is_dead()
+          None => false
+        }
+        if fun_dead {
+          type_tuple_ret.dual()
+        } else {
+          let ctrl_ty = match self.input(0) {
+            Some(n) => n.ty()
+            None => bottom
+          }
+          let mem_ty = match self.input(1) {
+            Some(n) => n.ty()
+            None => bottom
+          }
+          let expr_ty = match self.input(2) {
+            Some(n) => n.ty()
+            None => bottom
+          }
+          Tuple(Some([ctrl_ty, mem_ty, expr_ty]))
+        }
       }
-      Tuple(Some([ctrl_ty, expr_ty]))
     }
     Constant =>
       match self._con {
@@ -1541,19 +1743,19 @@ pub fn Node::compute(self : Node) -> Type {
         return type_tuple_if_neither
       }
       let pred_ty = self.input_exn(1).ty()
-      if pred_ty == top || pred_ty == type_integer_top {
+      if pred_ty.is_high() {
         return type_tuple_if_neither
       }
-      match pred_ty {
-        Int(i) =>
-          if i.is_constant() {
-            return if i.value_exn() == 0L {
-              type_tuple_if_false
-            } else {
-              type_tuple_if_true
-            }
-          }
-        _ => ()
+      if pred_ty.is_constant() {
+        return match pred_ty {
+          Nil => type_tuple_if_false
+          Int(i) if i.is_constant() && i.value_exn() == 0L => type_tuple_if_false
+          FunPtr(tfp) if tfp._fidxs == 0L => type_tuple_if_false
+          _ => type_tuple_if_true
+        }
+      }
+      if !pred_ty.make_zero().isa(pred_ty) {
+        return type_tuple_if_true
       }
       type_tuple_if_both
     }
@@ -1574,10 +1776,10 @@ pub fn Node::compute(self : Node) -> Type {
       }
       self.input_exn(1).ty()
     }
-    Phi =>
+    Phi | Parm =>
       match self.input(0) {
         Some(region) =>
-          if region.kind != Region && region.kind != Loop {
+          if region.kind != Region && region.kind != Loop && region.kind != Fun {
             if region.ty() == xcontrol {
               top
             } else {
@@ -1996,22 +2198,22 @@ fn _spline_cmp(hi : Node, lo : Node, dep : Node) -> Bool {
   if hi.ty().is_constant() {
     return true
   }
-  if lo.kind == Phi && lo.input_exn(0).ty() == xcontrol {
+  if (lo.kind == Phi || lo.kind == Parm) && lo.input_exn(0).ty() == xcontrol {
     return false
   }
-  if hi.kind == Phi && hi.input_exn(0).ty() == xcontrol {
+  if (hi.kind == Phi || hi.kind == Parm) && hi.input_exn(0).ty() == xcontrol {
     return false
   }
-  if lo.kind == Phi && lo.all_cons(dep) {
+  if (lo.kind == Phi || lo.kind == Parm) && lo.all_cons(dep) {
     return false
   }
-  if hi.kind == Phi && hi.all_cons(dep) {
+  if (hi.kind == Phi || hi.kind == Parm) && hi.all_cons(dep) {
     return true
   }
-  if lo.kind == Phi && hi.kind != Phi {
+  if (lo.kind == Phi || lo.kind == Parm) && !(hi.kind == Phi || hi.kind == Parm) {
     return true
   }
-  if hi.kind == Phi && lo.kind != Phi {
+  if (hi.kind == Phi || hi.kind == Parm) && !(lo.kind == Phi || lo.kind == Parm) {
     return false
   }
   lo._nid > hi._nid
@@ -2019,7 +2221,7 @@ fn _spline_cmp(hi : Node, lo : Node, dep : Node) -> Bool {
 
 ///|
 fn Node::pcon(op : Node, dep : Node) -> Node? {
-  if op.kind == Phi && op.all_cons(dep) {
+  if (op.kind == Phi || op.kind == Parm) && op.all_cons(dep) {
     Some(op)
   } else {
     None
@@ -2316,14 +2518,54 @@ fn Node::idealize_mul(self : Node) -> Node? {
   let rhs = self.input_exn(2)
   let t1 = lhs.ty()
   let t2 = rhs.ty()
-  match t2 {
-    Int(i) if i.is_constant() && i.value_exn() == 1L => return Some(lhs)
-    _ => ()
-  }
+
+  // Move constants to RHS
   if t1.is_constant() && !t2.is_constant() {
     ignore(self.swap12())
     return Some(self)
   }
+
+  // Multiply by constant
+  match t2 {
+    Int(i) if i.is_constant() => {
+      let c = i.value_exn()
+      if c == 1L {
+        return Some(lhs)
+      }
+      if c == 0L {
+        return Some(zero.val)
+      }
+      if c.land(c - 1L) == 0L {
+        let sh = c.ctz()
+        return Some(
+          Node::new_shl(
+            lhs,
+            Node::new_constant(TypeInteger::constant(sh.to_int64())).peephole(),
+          ),
+        )
+      }
+      let d = c - 1L
+      if d.land(d - 1L) == 0L {
+        let sh = d.ctz()
+        let shl = Node::new_shl(
+          lhs,
+          Node::new_constant(TypeInteger::constant(sh.to_int64())).peephole(),
+        ).peephole()
+        return Some(Node::new_add(shl, lhs))
+      }
+      let e = c + 1L
+      if e.land(e - 1L) == 0L {
+        let sh = e.ctz()
+        let shl = Node::new_shl(
+          lhs,
+          Node::new_constant(TypeInteger::constant(sh.to_int64())).peephole(),
+        ).peephole()
+        return Some(Node::new_sub(shl, lhs))
+      }
+    }
+    _ => ()
+  }
+
   self.phi_con(true)
 }
 
@@ -2456,10 +2698,33 @@ fn Node::idealize_load(self : Node) -> Node? {
       _ => panic()
     }
   }
+  let extend = fn(val : Node) -> Node {
+    match self._declared_type {
+      Int(ti) =>
+        if ti._min == 0L {
+          Node::new_and(
+            val,
+            Node::new_constant(TypeInteger::constant(ti._max)).peephole(),
+          ).peephole()
+        } else {
+          let shift = ti._max.clz() - 1
+          if shift <= 0 {
+            val
+          } else {
+            let shf = Node::new_constant(
+              TypeInteger::constant(Int64::from_int(shift)),
+            ).peephole()
+            let shl = Node::new_shl(val, shf.keep()).peephole()
+            Node::new_sar(shl, shf.unkeep()).peephole()
+          }
+        }
+      _ => val
+    }
+  }
 
   // Simple Load-after-Store on same address.
   if mem.kind == Store && ptr0 == mem.input_exn(2) && off == mem.input_exn(3) {
-    return Some(mem.input_exn(4))
+    return Some(extend(mem.input_exn(4)))
   }
 
   // Simple Load-after-New on same address.
@@ -2468,7 +2733,30 @@ fn Node::idealize_load(self : Node) -> Node? {
     ptr0.kind == Proj &&
     ptr0.input_exn(0) == mem.input_exn(0) &&
     ptr0._proj_idx == 1 {
-    return Some(new_init_for_alias(mem.input_exn(0), self._memop_alias))
+    return Some(cast_ro(new_init_for_alias(mem.input_exn(0), self._memop_alias)))
+  }
+
+  // Uplift control to a prior dominating load.
+  let cfg0_opt = fn(n : Node) -> Node? {
+    match n.input(0) {
+      Some(_) => Some(n.cfg0())
+      None => None
+    }
+  }
+  let self_cfg = cfg0_opt(self)
+  for memuse in mem._outputs {
+    match memuse {
+      Some(ld) if ld != self && ld.kind == Load &&
+          ptr0 == ld.input_exn(2) && off == ld.input_exn(3) =>
+        match (self_cfg, cfg0_opt(ld)) {
+          (Some(cfg), Some(ld_cfg)) =>
+            if cfg.idom_lca(Some(ld_cfg)) == ld_cfg {
+              return Some(ld)
+            }
+          _ => ()
+        }
+      _ => ()
+    }
   }
 
   // Load-after-Store on same address, but bypassing provably unrelated stores/news.
@@ -2485,8 +2773,8 @@ fn Node::idealize_load(self : Node) -> Node? {
     match mem0.kind {
       Store => {
         let st = mem0
-        if ptr == st.input_exn(2) && off == st.input_exn(3) {
-          return Some(cast_ro(st.input_exn(4)))
+        if ptr == st.input_exn(2).add_dep(self) && off == st.input_exn(3) {
+          return Some(extend(cast_ro(st.input_exn(4))))
         }
         if !off.ty().join(st.input_exn(3).ty()).is_high() &&
           !never_alias(ptr, st.input_exn(2)) {
@@ -2495,6 +2783,7 @@ fn Node::idealize_load(self : Node) -> Node? {
         mem0 = st.input_exn(1)
       }
       Phi => break
+      Constant => break
       Proj => {
         let mproj = mem0
         let base = mproj.input_exn(0)
@@ -2506,10 +2795,13 @@ fn Node::idealize_load(self : Node) -> Node? {
             break
           }
           mem0 = base.input_exn(self._memop_alias)
+        } else if base.kind == Start || base.kind == CallEnd {
+          break
         } else {
           break
         }
       }
+      Mem => mem0 = mem0._alias(self._memop_alias)
       _ => break
     }
   }
@@ -2577,6 +2869,15 @@ fn Node::idealize_load(self : Node) -> Node? {
 ///|
 fn Node::idealize_proj(self : Node) -> Node? {
   let ctrl = self.input_exn(0)
+  if ctrl.kind == CallEnd && ctrl._folding {
+    match ctrl.input(1) {
+      Some(ret) =>
+        if self._proj_idx < ret.n_ins() {
+          return Some(ret.input_exn(self._proj_idx))
+        }
+      None => ()
+    }
+  }
   let other = 1 - self._proj_idx
   match ctrl.ty() {
     Tuple(Some(types)) =>
@@ -2692,10 +2993,66 @@ fn Node::idealize_region(self : Node) -> Node? {
 
 ///|
 fn Node::idealize_return(self : Node) -> Node? {
-  if self.ctrl().ty() == xcontrol {
-    Some(self.ctrl())
-  } else {
-    None
+  // Legacy Stop/Return style (no owning function): keep old behavior so Stop
+  // can drop dead returns by seeing an XCtrl.
+  match self._ret_fun {
+    None =>
+      if self.ctrl().ty() == xcontrol {
+        Some(self.ctrl())
+      } else {
+        None
+      }
+    Some(_) => {
+      // No peepholes while the multi-exit return is being assembled.
+      if self.in_progress() {
+        return None
+      }
+
+      // Dead another way (e.g. after SCCP).
+      match self._ret_fun {
+        Some(fun) if fun.is_dead() => return None
+        _ => ()
+      }
+
+      // Upgrade function signature based on the computed return type (matches refs/simple).
+      match self._ret_fun {
+        Some(fun) if fun.kind == Fun =>
+          match fun._fun_sig {
+            Some(sig) => {
+              let ret_ty = self.expr().ty()
+              if !ret_ty.isa(sig.ret()) {
+                panic()
+              }
+              if ret_ty != sig.ret() {
+                let f = IterPeeps::add(fun)
+                f._fun_sig = Some(sig.make_from_ret(ret_ty))
+              }
+            }
+            None => ()
+          }
+        _ => ()
+      }
+
+      // If dead (can't be reached; infinite loop), kill the exit values.
+      if self.ctrl().ty() == xcontrol {
+        let mem_is_con = match self.input(1) {
+          Some(n) => n.kind == Constant
+          None => false
+        }
+        let expr_is_con = match self.input(2) {
+          Some(n) => n.kind == Constant
+          None => false
+        }
+        if !(mem_is_con && expr_is_con) {
+          let topc = Node::new_constant(top).peephole()
+          ignore(self.set_def(1, Some(topc)))
+          ignore(self.set_def(2, Some(topc)))
+          return Some(self)
+        }
+      }
+
+      None
+    }
   }
 }
 
@@ -2704,9 +3061,18 @@ fn Node::idealize_stop(self : Node) -> Node? {
   let len = self.n_ins()
   let mut i = 0
   while i < self.n_ins() {
-    if self.input_exn(i).ty() == xcontrol {
-      ignore(self.del_def(i))
-      i = i - 1
+    let ret = self.input_exn(i)
+    match ret._ret_fun {
+      Some(fun) =>
+        if fun.is_dead() {
+          ignore(self.del_def(i))
+          i = i - 1
+        }
+      None =>
+        if ret.ctrl().ty() == xcontrol {
+          ignore(self.del_def(i))
+          i = i - 1
+        }
     }
     i = i + 1
   }
@@ -2718,6 +3084,198 @@ fn Node::idealize_stop(self : Node) -> Node? {
 }
 
 ///|
+///|
+fn Node::idealize_call(self : Node) -> Node? {
+  // Wait until CallEnd is constructed (matches refs/simple).
+  let mut cend : Node? = None
+  for use_ in self._outputs {
+    match use_ {
+      Some(n) if n.kind == CallEnd => {
+        if cend is Some(_) {
+          panic()
+        }
+        cend = Some(n)
+      }
+      _ => ()
+    }
+  }
+  let cend = match cend {
+    Some(n) => n
+    None => return None
+  }
+
+  let fptr = self.input_exn(self.n_ins() - 1)
+  match fptr.ty() {
+    FunPtr(tfp) if tfp.nargs() == self.n_ins() - 3 => {
+      let mut fidxs = tfp.fidxs()
+      if fidxs > 0L {
+        while fidxs != 0L {
+          let fidx = fidxs.ctz()
+          let tfp0 = tfp.make_from_fidx(fidx)
+          match link_get(tfp0) {
+            Some(fun) => {
+              // True if Fun is already linked to this Call.
+              let mut linked = false
+              for inp in fun._inputs {
+                match inp {
+                  Some(n) if n == self => { linked = true; break }
+                  _ => ()
+                }
+              }
+              if !linked && !fun._folding {
+                // Link so this Call calls fun (matches refs/simple CallNode.link).
+                let f = IterPeeps::add(fun)
+                ignore(f.add_def(Some(self)))
+                for use2 in f._outputs {
+                  match use2 {
+                    Some(parm) if parm.kind == Parm => {
+                      let arg = if parm._parm_idx == 0 { cend } else {
+                        self.input_exn(parm._parm_idx)
+                      }
+                      let p = IterPeeps::add(parm)
+                      ignore(p.add_def(Some(arg)))
+                    }
+                    _ => ()
+                  }
+                }
+                match f._fun_ret {
+                  Some(ret) => {
+                    let ce = IterPeeps::add(cend)
+                    ignore(ce.add_def(Some(ret)))
+                  }
+                  None => panic()
+                }
+              }
+            }
+            None => ()
+          }
+          fidxs = TypeFunPtr::next_fidx(fidxs)
+        }
+      }
+    }
+    _ => ()
+  }
+  None
+}
+
+fn Node::idealize_call_end(self : Node) -> Node? {
+  if self._folding {
+    return None
+  }
+  if self.n_ins() != 2 {
+    return None
+  }
+  let call = match self.input(0) {
+    Some(n) if n.kind == Call => n
+    _ => return None
+  }
+  let fptr = call.input_exn(call.n_ins() - 1)
+  let mut can_inline = false
+  match fptr.ty() {
+    FunPtr(tfp) =>
+      if fptr.n_outs() == 1 && fptr.kind == Constant && tfp.not_null() &&
+        call.err() is None {
+        can_inline = true
+      }
+    _ => ()
+  }
+  if can_inline {
+    let ret = self.input_exn(1)
+    let fun = match ret._ret_fun {
+      Some(f) => f
+      None => return None
+    }
+    if fun.n_ins() == 3 &&
+      fun.input_exn(1) == start.val &&
+      fun.input_exn(2) == call {
+      let mut idom = call
+      while idom.kind != Fun {
+        match idom.idom() {
+          Some(next) => idom = next
+          None => panic()
+        }
+      }
+      if idom != fun {
+        self._folding = true
+        fun._folding = true
+        ignore(fun.set_def(1, Some(xctrl.val)))
+        ignore(fun.set_def(2, Some(call.input_exn(0))))
+        match fun._fun_ret {
+          Some(fun_ret) => ignore(fun_ret.set_def(3, None))
+          None => ()
+        }
+        IterPeeps::add_all(fun._outputs)
+        return Some(self)
+      }
+    } else {
+      ignore(fun.add_dep(self))
+    }
+  } else {
+    ignore(fptr.add_dep(self))
+  }
+  None
+}
+
+fn Node::idealize_fun(self : Node) -> Node? {
+  // Delete dead paths into a Fun, even if still in progress.
+  let path = self.find_dead_input()
+  if path != 0 {
+    let mut nouts = 0
+    while nouts != self.n_outs() {
+      nouts = self.n_outs()
+      for i = 0; i < self.n_outs(); i = i + 1 {
+        match self._outputs[i] {
+          Some(phi) if (phi.kind == Phi || phi.kind == Parm) &&
+              phi.n_ins() == self.n_ins() =>
+            ignore(phi.del_def(path))
+          _ => ()
+        }
+      }
+    }
+    self._idom = None
+    let progress = if self.is_dead() { xctrl.val } else { self.del_def(path) }
+    if self.n_ins() == 3 {
+      match self.input(2) {
+        Some(call) if call.kind == Call =>
+          for use_ in call._outputs {
+            match use_ {
+              Some(cend) if cend.kind == CallEnd =>
+                ignore(IterPeeps::add(cend))
+              _ => ()
+            }
+          }
+        _ => ()
+      }
+    }
+    return Some(progress)
+  }
+
+  // Stop if unknown callers remain.
+  if self.in_progress() {
+    return None
+  }
+
+  let mut has_phi = false
+  for out in self._outputs {
+    match out {
+      Some(phi) if phi.kind == Phi || phi.kind == Parm => {
+        has_phi = true
+        break
+      }
+      _ => ()
+    }
+  }
+  if self.n_ins() == 2 && !has_phi {
+    ignore(IterPeeps::add(stop.val))
+    match self._fun_ret {
+      Some(ret) => ignore(IterPeeps::add(ret))
+      None => ()
+    }
+    return Some(self.input_exn(1))
+  }
+  None
+}
+
 fn Node::phi_same_op(self : Node) -> Bool {
   let k = self.input_exn(1).kind
   for i = 2; i < self.n_ins(); i = i + 1 {
@@ -2754,7 +3312,7 @@ fn Node::idealize_phi(self : Node) -> Node? {
     Some(region) => region
     None => return None
   }
-  if region.kind != Region && region.kind != Loop {
+  if region.kind != Region && region.kind != Loop && region.kind != Fun {
     return Some(self.input_exn(1))
   }
   if region.in_progress() || region.n_ins() <= 1 {
@@ -2854,6 +3412,10 @@ pub fn Node::idealize(self : Node) -> Node? {
     BoolEq | BoolEqF | BoolLt | BoolLtF | BoolLe | BoolLeF =>
       self.idealize_bool()
     CProj => self.idealize_proj()
+    Proj => self.idealize_proj()
+    Call => self.idealize_call()
+    CallEnd => self.idealize_call_end()
+    Fun => self.idealize_fun()
     Load => self.idealize_load()
     Store => self.idealize_store()
     Return => self.idealize_return()
@@ -2861,6 +3423,8 @@ pub fn Node::idealize(self : Node) -> Node? {
     Region => self.idealize_region()
     Loop => self.idealize_region()
     Phi => self.idealize_phi()
+    Parm => self.idealize_phi()
+    FRef => if self.n_ins() == 1 { None } else { self.input(1) }
     SubF => self.idealize_subf()
     MinusF => self.idealize_minusf()
     _ => None
@@ -3016,6 +3580,48 @@ fn Node::err(self : Node) -> String? {
       }
       None
     }
+    Call => {
+      let fptr = self.input_exn(self.n_ins() - 1)
+      let tfp = match fptr.ty() {
+        FunPtr(tfp) => tfp
+        _ => panic()
+      }
+      if !tfp.not_null() {
+        return Some("Might be null calling \{tfp.str()}")
+      }
+      let nargs = self.n_ins() - 3
+      if nargs != tfp.nargs() {
+        return Some("Expecting \{tfp.nargs()} arguments, but found \{nargs}")
+      }
+      for i = 0; i < tfp.nargs(); i = i + 1 {
+        let arg_ty = self.input_exn(i + 2).ty()
+        let expect = tfp.arg(i)
+        if !arg_ty.isa(expect) {
+          return Some(
+            "Argument #\{i} isa \{arg_ty.str()}, but must be a \{expect.str()}",
+          )
+        }
+      }
+      None
+    }
+    Return => {
+      match self._ret_fun {
+        None => None
+        Some(_) =>
+          if self.expr().ty() == bottom {
+            Some(
+              _return_mixerr(
+                self._ret_ti,
+                self._ret_tf,
+                self._ret_tp,
+                self._ret_tn,
+              ),
+            )
+          } else {
+            None
+          }
+      }
+    }
     Add | Mul => {
       let t1 = self.input_exn(1).ty()
       if !_is_int_type(t1) {
@@ -3058,6 +3664,39 @@ fn Node::err(self : Node) -> String? {
     }
     _ => None
   }
+}
+
+///|
+fn _return_mixerr(ti : Bool, tf : Bool, tp : Bool, tn : Bool) -> String {
+  if !ti && !tf && !tp && !tn {
+    return "No defined return type"
+  }
+  let sb = StringBuilder::new()
+  sb.write_string("No common type amongst ")
+  let mut first = true
+  if ti {
+    if !first {
+      sb.write_string(" and ")
+    } else {
+      first = false
+    }
+    sb.write_string("int")
+  }
+  if tf {
+    if !first {
+      sb.write_string(" and ")
+    } else {
+      first = false
+    }
+    sb.write_string("f64")
+  }
+  if tp || tn {
+    if !first {
+      sb.write_string(" and ")
+    }
+    sb.write_string("reference")
+  }
+  sb.to_string()
 }
 
 ///|
@@ -3141,6 +3780,81 @@ fn Node::_print1(
 ) -> Unit {
   match self.kind {
     Start => sb.write_string(self.label())
+    Fun => sb.write_string(self.label())
+    Call => {
+      let fptr = self.input_exn(self.n_ins() - 1)
+      // Prefer linker name for constant calls (matches refs/simple CallNode.name()).
+      let mut printed = false
+      match fptr.ty() {
+        FunPtr(tfp) if tfp.is_constant() =>
+          match link_get(tfp) {
+            Some(fun) =>
+              match fun._fun_name {
+                Some(n) => {
+                  sb.write_string(n)
+                  printed = true
+                }
+                None => ()
+              }
+            None => ()
+          }
+        _ => ()
+      }
+      if !printed {
+        fptr._print0(sb, visited)
+      }
+      let nargs = self.n_ins() - 3
+      if nargs == 0 {
+        sb.write_string("()")
+      } else {
+        sb.write_string("( " )
+        let mut first = true
+        for i = 2; i < self.n_ins() - 1; i = i + 1 {
+          if !first {
+            sb.write_string(",")
+          }
+          first = false
+          self.input_exn(i)._print0(sb, visited)
+        }
+        sb.write_string(")")
+      }
+    }
+    CallEnd => sb.write_string("CallEnd")
+    Parm => {
+      if self._phi_label == "arg" {
+        match self.input(0) {
+          Some(fun) if fun.kind == Fun =>
+            match fun._fun_name {
+              Some(name) if name == "main" => {
+                sb.write_string("arg")
+                return
+              }
+              _ => ()
+            }
+          _ => ()
+        }
+      }
+      sb.write_string("Parm_")
+      sb.write_string(self._phi_label)
+      sb.write_string("(")
+      let mut first = true
+      for input in self._inputs {
+        if !first {
+          sb.write_string(",")
+        }
+        first = false
+        match input {
+          Some(n) => n._print0(sb, visited)
+          None => sb.write_string("____")
+        }
+      }
+      sb.write_string(")")
+    }
+    FRef =>
+      match self._fref_var {
+        Some(v) => sb.write_string("FRef_" + v._name)
+        None => sb.write_string("FRef")
+      }
     Stop => {
       if self.n_ins() == 1 {
         match self.input(0) {
@@ -3167,6 +3881,19 @@ fn Node::_print1(
     }
     Constant =>
       match self._con {
+        Some(FunPtr(tfp)) =>
+          match link_get(tfp) {
+            Some(fun) =>
+              match fun._fun_name {
+                Some(name) => {
+                  sb.write_string("{ ")
+                  sb.write_string(name)
+                  sb.write_string("}")
+                }
+                None => Type::FunPtr(tfp).print_to(sb)
+              }
+            None => Type::FunPtr(tfp).print_to(sb)
+          }
         Some(con) => con.print_to(sb)
         None => bottom.print_to(sb)
       }
@@ -3315,7 +4042,21 @@ fn Node::_print1(
       sb.write_string(" )")
     }
     Never => sb.write_string("Never")
-    CProj | Proj => sb.write_string(self._proj_label)
+    CProj => sb.write_string(self._proj_label)
+    Proj =>
+      if self._proj_label != "" {
+        sb.write_string(self._proj_label)
+      } else {
+        let base = self.input_exn(0)
+        if base.kind == CallEnd {
+          match base.input(0) {
+            Some(call) if call.kind == Call => call._print0(sb, visited)
+            _ => sb.write_string("LONELY PROJ")
+          }
+        } else {
+          sb.write_string("LONELY PROJ")
+        }
+      }
     BoolEq | BoolEqF | BoolLt | BoolLtF | BoolLe | BoolLeF => {
       let op = match self.kind {
         BoolEq | BoolEqF => "=="
@@ -3397,15 +4138,17 @@ pub impl Eq for Node with equal(self, other) {
 }
 
 ///|
-pub fn Node::push(self : Node, in_con? : Bool = false) -> Unit {
+pub fn Node::push(self : Node, in_con? : Bool = false, in_fun? : Bool = false) -> Unit {
   if self.kind != Scope {
     panic()
   }
-  if self._lex_size.length() != self._in_cons.length() {
+  if self._lex_size.length() != self._in_cons.length() ||
+    self._lex_size.length() != self._in_funs.length() {
     panic()
   }
   self._lex_size.push(self._vars.length())
   self._in_cons.push(in_con)
+  self._in_funs.push(in_fun)
 }
 
 ///|
@@ -3413,14 +4156,48 @@ pub fn Node::pop(self : Node) -> Unit {
   if self.kind != Scope {
     panic()
   }
-  if self._lex_size.length() != self._in_cons.length() {
+  if self._lex_size.length() != self._in_cons.length() ||
+    self._lex_size.length() != self._in_funs.length() {
     panic()
   }
+
+  // Promote forward refs to the next outer lexical scope so they can be
+  // resolved later (matches refs/simple ScopeNode.promote()).
+  if self._lex_size.length() > 1 {
+    let mut n = match self._lex_size.last() {
+      Some(n) => n
+      None => panic()
+    }
+    let mut i = n
+    while i < self.n_ins() {
+      let v = self._vars[i]
+      if v._fref {
+        // Swap var+input into the promotion slot.
+        let tmpv = self._vars[n]
+        self._vars[n] = v
+        self._vars[i] = tmpv
+        let tmpin = self._inputs[n]
+        self._inputs[n] = self._inputs[i]
+        self._inputs[i] = tmpin
+        // Fix the promoted var's idx.
+        self._vars[n] = { ..self._vars[n], _idx: n }
+        n = n + 1
+        // Bump the current lexical boundary so promoted names survive pop().
+        self._lex_size[self._lex_size.length() - 1] = n
+      }
+      i = i + 1
+    }
+  }
+
   let n = match self._lex_size.pop() {
     Some(n) => n
     None => panic()
   }
   match self._in_cons.pop() {
+    Some(_) => ()
+    None => panic()
+  }
+  match self._in_funs.pop() {
     Some(_) => ()
     None => panic()
   }
@@ -3442,6 +4219,31 @@ pub fn Node::in_con(self : Node) -> Bool {
     Some(b) => b
     None => panic()
   }
+}
+
+///|
+/// Is `v` defined outside the current function scope?
+pub fn Node::out_of_function(self : Node, v : Var) -> Bool {
+  if self.kind != Scope {
+    panic()
+  }
+  let mut i = self._lex_size.length()
+  while i > 0 {
+    i = i - 1
+    match self._lex_size.get(i) {
+      Some(lex) => {
+        if v._idx >= lex {
+          break
+        }
+      }
+      None => break
+    }
+    match self._in_funs.get(i) {
+      Some(true) => return true
+      _ => ()
+    }
+  }
+  false
 }
 
 ///|
@@ -3556,6 +4358,14 @@ pub fn Node::upcast_guard(self : Node, pred : Node) -> Node {
     if xpred == pred {
       return cast
     }
+    if xpred.kind == Load && pred.kind == Load {
+      if xpred._memop_alias == pred._memop_alias &&
+        xpred.input_exn(1) == pred.input_exn(1) &&
+        xpred.input_exn(2) == pred.input_exn(2) &&
+        xpred.input_exn(3) == pred.input_exn(3) {
+        return cast
+      }
+    }
   }
   pred
 }
@@ -3574,27 +4384,47 @@ pub fn Node::define_(
   if name.has_prefix("$".to_string_view()) && self._lex_size.length() != 1 {
     panic()
   }
-  if self._lex_size.length() > 1 {
-    let lexlen = match self._lex_size.last() {
-      Some(n) => n
-      None => panic()
-    }
-    let mut i = self._vars.length()
-    while i > lexlen {
-      i = i - 1
-      if self._vars[i]._name == name {
+
+  // Disallow double-defs in the current lexical scope, but allow resolving
+  // forward references created by `require_lookup_id`.
+  let lexlen = match self._lex_size.last() {
+    Some(n) => n
+    None => panic()
+  }
+  let mut i = self._vars.length()
+  while i > lexlen {
+    i = i - 1
+    if self._vars[i]._name == name {
+      if !self._vars[i]._fref {
         return false
       }
+      // Resolve forward ref by wiring the FRef node to the real definition.
+      self._vars[i] = { ..self._vars[i], _type: declared_type, _final: xfinal, _fref: false }
+      let idx = self._vars[i]._idx
+      let fref = self.input_exn(idx)
+      if fref.kind != FRef {
+        panic()
+      }
+      ignore(self.set_def(idx, fref.add_def(Some(init))))
+      return true
     }
   }
+
   let idx = self.n_ins()
-  self._vars.push({
+  let v : Var = {
     _idx: idx,
     _name: name,
     _type: declared_type,
     _final: xfinal,
-  })
-  ignore(self.add_def(Some(init)))
+    _fref: init.kind == XCtrl,
+  }
+  self._vars.push(v)
+  let init0 = if init.kind == XCtrl {
+    Node::new_fref(v).peephole()
+  } else {
+    init
+  }
+  ignore(self.add_def(Some(init0)))
   true
 }
 
@@ -3769,6 +4599,21 @@ fn Node::_mem(self : Node, alias_id : Int, st : Node?) -> Node {
 }
 
 ///|
+pub fn Node::merge(self : Node) -> Node {
+  if self.kind != Mem {
+    panic()
+  }
+  // Copy all aliases into a new Mem snapshot (matches refs/simple MemMergeNode.merge()).
+  let merge = Node::new_mem()
+  for inp in self._inputs {
+    ignore(merge.add_def(inp))
+  }
+  // Force default memory to not be lazy.
+  ignore(merge._mem(1, None))
+  merge
+}
+
+///|
 fn Node::_merge_mem(self : Node, that : Node, r : Node) -> Unit {
   if self.kind != Mem || that.kind != Mem {
     panic()
@@ -3822,17 +4667,20 @@ fn Node::_end_loop_mem(
     exit.kind != Mem {
     panic()
   }
-  for i = 2; i < back.n_ins(); i = i + 1 {
-    if back.input(i) != Some(scope) {
-      let phi = self.input_exn(i)
-      if phi.kind != Phi ||
-        phi.input_exn(0) != scope.ctrl() ||
-        phi.input(2) is Some(_) {
-        panic()
+  let exit_def = exit._alias(1)
+  for i = 1; i < self.n_ins(); i = i + 1 {
+    match self.input(i) {
+      Some(phi) if phi.kind == Phi && phi.input_exn(0) == scope.ctrl() => {
+        if phi.input(2) is Some(_) {
+          panic()
+        }
+        let back_in = back.input(i)
+        let fill = if back_in == Some(scope) { Some(phi) } else { back_in }
+        ignore(phi.set_def(2, fill))
       }
-      ignore(phi.set_def(2, back.input(i)))
+      _ => ()
     }
-    if exit._alias(i) == scope {
+    if exit_def == scope {
       ignore(exit._alias_set(i, self.input_exn(i)))
     }
   }
@@ -3852,6 +4700,10 @@ fn Node::_end_loop_scope(
     panic()
   }
   for i = 2; i < self.n_ins(); i = i + 1 {
+    let v = self._vars[i]
+    if v._final || v._type.is_high_or_const() {
+      continue
+    }
     if back.input(i) != Some(scope) {
       let phi = self.input_exn(i)
       if phi.kind != Phi ||
@@ -3924,6 +4776,9 @@ pub fn Node::dup(self : Node, is_loop? : Bool = false) -> Node {
   for b in self._in_cons {
     dup._in_cons.push(b)
   }
+  for b in self._in_funs {
+    dup._in_funs.push(b)
+  }
   for g in self._guards {
     if !g.is_cfg() {
       ignore(g.keep())
@@ -3940,12 +4795,37 @@ pub fn Node::dup(self : Node, is_loop? : Bool = false) -> Node {
   }
   ignore(dup.add_def(Some(memdup)))
   for i = 2; i < self.n_ins(); i = i + 1 {
-    ignore(dup.add_def(if is_loop { Some(self) } else { self.input(i) }))
+    let v = self._vars[i]
+    ignore(
+      dup.add_def(
+        if is_loop && !v._final { Some(self) } else { self.input(i) },
+      ),
+    )
   }
   dup
 }
 
 ///|
+pub fn Node::balance_if(self : Node, scope : Node) -> Unit raise ParseError {
+  if self.kind != Scope || scope.kind != Scope {
+    panic()
+  }
+  let mut i = self.n_ins()
+  while i < scope.n_ins() {
+    let v = scope._vars[i]
+    if v._fref {
+      // Copy forward refs so both arms have the same set of names.
+      self._vars.push(v)
+      ignore(self.add_def(scope.input(i)))
+    } else {
+      raise ParseError::Msg("Cannot define a '\{v._name}' on one arm of an if")
+    }
+    i = i + 1
+  }
+}
+
+///|
+
 pub fn Node::merge_scopes(self : Node, that : Node) -> Node {
   if self.kind != Scope || that.kind != Scope {
     panic()

@@ -39,8 +39,8 @@ test "chapter04: var arg" {
   let parser = Parser::new("return arg;")
   let stop = parser.parse()
   let ret = stop.input_exn(0)
-  assert_true(ret.input_exn(0).kind is CProj)
-  assert_true(ret.input_exn(1).kind is Proj)
+  assert_true(ret.input_exn(0).kind is Region)
+  assert_true(ret.input_exn(2).kind is Parm)
 }
 
 ///|

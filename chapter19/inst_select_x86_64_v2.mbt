@@ -85,7 +85,9 @@ fn _select_lea(n : Node, base : Node, idx0 : Node, off : Int64) -> Bool {
   let mut base0 = base
   let mut idx = idx1
   // Prefer printing `arg` as the base for symmetric (scale==1) LEAs.
-  if scale == 1L && idx.kind == Proj && base0.kind != Proj {
+  if scale == 1L &&
+    ((idx.kind == Proj && base0.kind != Proj) ||
+      (idx.kind == Parm && base0.kind != Parm)) {
     let tmp = base0
     base0 = idx
     idx = tmp
