@@ -31,6 +31,7 @@ pub struct CodeGen {
 
   // Parser object
   mut _parser : Parser
+  mut _reg_alloc : RegAlloc?
 }
 
 ///|
@@ -44,6 +45,7 @@ pub fn CodeGen::new(src : String, arg? : Type = type_integer_bot) -> CodeGen {
     _start: start.val,
     _stop: p._stop,
     _parser: p,
+    _reg_alloc: None,
   }
 }
 
@@ -93,6 +95,8 @@ pub fn CodeGen::inst_select(
   }
   // Instruction selection rewrites the graph, so (re)build the schedule afterwards.
   scheduled.val = false
+  local_scheduled.val = false
+  self._reg_alloc = None
   if cpu == "x86_64_v2" {
     inst_select_x86_64_v2(self._stop)
   } else {
@@ -110,14 +114,31 @@ pub fn CodeGen::gcm(self : CodeGen, _show? : Bool = false) -> CodeGen {
     GlobalCodeMotion::fix_loops(self._stop)
     GlobalCodeMotion::build_cfg(self._stop)
   }
+  local_scheduled.val = false
   self
 }
 
 ///|
 pub fn CodeGen::local_sched(self : CodeGen) -> CodeGen {
   self._phase = Some(LocalSched)
-  // TODO(chapter19): list scheduler; refs/simple uses ListScheduler.sched(this).
+  ListScheduler::sched(self)
+  local_scheduled.val = true
   self
+}
+
+///|
+pub fn CodeGen::reg_alloc(self : CodeGen) -> CodeGen {
+  self._phase = Some(RegAlloc)
+  self._reg_alloc = Some(RegAlloc::run(self))
+  self
+}
+
+///|
+pub fn CodeGen::reg_alloc_dump(self : CodeGen) -> String {
+  match self._reg_alloc {
+    Some(alloc) => alloc.dump(self)
+    None => ""
+  }
 }
 
 ///|

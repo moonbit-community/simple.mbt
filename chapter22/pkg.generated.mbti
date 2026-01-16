@@ -14,6 +14,8 @@ pub let iter_cnt : Ref[Int]
 
 pub let iter_nop_cnt : Ref[Int]
 
+pub let local_scheduled : Ref[Bool]
+
 pub let scheduled : Ref[Bool]
 
 pub let scope_arg0 : String
@@ -139,6 +141,7 @@ pub struct CodeGen {
   mut _start : Node
   mut _stop : Node
   mut _parser : Parser
+  mut _reg_alloc : RegAlloc?
 }
 pub fn CodeGen::gcm(Self, _show? : Bool) -> Self
 pub fn CodeGen::inst_select(Self, String, String) -> Self
@@ -147,6 +150,8 @@ pub fn CodeGen::new(String, arg? : Type) -> Self
 pub fn CodeGen::opto(Self) -> Self
 pub fn CodeGen::parse(Self, show? : Bool) -> Self raise ParseError
 pub fn CodeGen::print(Self) -> String
+pub fn CodeGen::reg_alloc(Self) -> Self
+pub fn CodeGen::reg_alloc_dump(Self) -> String
 pub fn CodeGen::type_check(Self) -> Self raise ParseError
 
 pub struct Eval2 {
@@ -221,6 +226,10 @@ pub fn IterPeeps::add_all_nodes(Array[Node]) -> Unit
 pub fn IterPeeps::iterate(Node) -> Node
 pub fn IterPeeps::mid_assert() -> Bool
 pub fn IterPeeps::reset() -> Unit
+
+pub struct ListScheduler {
+}
+pub fn ListScheduler::sched(CodeGen) -> Unit
 
 pub struct Node {
   _nid : Int
@@ -430,6 +439,8 @@ pub enum Phase {
 }
 pub impl Eq for Phase
 pub impl Show for Phase
+
+type RegAlloc
 
 pub enum Type {
   Bot

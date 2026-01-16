@@ -25,6 +25,9 @@ let inits : Ref[Map[String, Node]] = Ref::{ val: Map::new() }
 pub let scheduled : Ref[Bool] = Ref::{ val: false }
 
 ///|
+pub let local_scheduled : Ref[Bool] = Ref::{ val: false }
+
+///|
 pub fn Parser::new(source : String) -> Parser {
   Parser::new_with_arg(source, type_integer_bot)
 }
@@ -52,6 +55,7 @@ pub fn Parser::new_with_arg(source : String, arg : Type) -> Parser {
   types.val["val"] = top
   types.val["var"] = bottom
   scheduled.val = false
+  local_scheduled.val = false
   next_alias.val = 2
   inits.val = Map::new()
   let lexer = Lexer::new(source)

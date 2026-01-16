@@ -123,6 +123,32 @@ fn _push_map(m : Map[Int, Array[Node]], key : Int, value : Node) -> Unit {
 }
 
 ///|
+fn Evaluator::ordered_group(
+  anchor : Node,
+  group : Array[Node],
+) -> Array[Node] {
+  if !local_scheduled.val {
+    return Evaluator::topo_sort(group)
+  }
+  let in_group : Map[Int, Bool] = Map::new()
+  for n in group {
+    in_group[n._nid] = true
+  }
+  let ordered : Array[Node] = []
+  for out in anchor._outputs {
+    match out {
+      Some(n) if in_group.contains(n._nid) => ordered.push(n)
+      _ => ()
+    }
+  }
+  if ordered.length() != group.length() {
+    Evaluator::topo_sort(group)
+  } else {
+    ordered
+  }
+}
+
+///|
 fn Evaluator::build_schedule(nodes : Array[Node?]) -> Map[Int, Array[Node]] {
   let by_anchor : Map[Int, Array[Node]] = Map::new()
   for n in nodes {
@@ -146,7 +172,10 @@ fn Evaluator::build_schedule(nodes : Array[Node?]) -> Map[Int, Array[Node]] {
   }
   let ordered : Map[Int, Array[Node]] = Map::new()
   for key, group in by_anchor {
-    ordered[key] = Evaluator::topo_sort(group)
+    match nodes[key] {
+      Some(anchor) => ordered[key] = Evaluator::ordered_group(anchor, group)
+      None => ordered[key] = Evaluator::topo_sort(group)
+    }
   }
   ordered
 }
