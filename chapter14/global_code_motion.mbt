@@ -2,6 +2,9 @@
 pub struct GlobalCodeMotion {}
 
 ///|
+let _global_code_motion : GlobalCodeMotion = GlobalCodeMotion::{}
+
+///|
 pub fn GlobalCodeMotion::build_cfg(stop : Node) -> Unit {
   GlobalCodeMotion::sched_early()
   scheduled.val = true

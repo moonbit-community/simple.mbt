@@ -2,6 +2,9 @@
 pub struct ListScheduler {}
 
 ///|
+let _list_scheduler : ListScheduler = ListScheduler::{}
+
+///|
 priv struct XSched {
   _n : Node
   mut _bcnt : Int

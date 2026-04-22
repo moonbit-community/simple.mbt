@@ -2,6 +2,9 @@
 pub struct Eval2 {}
 
 ///|
+let _eval2 : Eval2 = Eval2::{}
+
+///|
 priv enum Eval2Value {
   Int(Int64)
   Float(Double)
