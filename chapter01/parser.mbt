@@ -176,7 +176,7 @@ fn Lexer::parse_number(self : Lexer) -> Int64 raise ParseError {
       _ => ()
     }
   }
-  @strconv.parse_int64(snum.to_string_view(), base=10) catch {
+  @string.parse_int64(snum.to_string_view(), base=10) catch {
     _ => raise ParseError::Msg("Syntax error, expected integer literal")
   }
 }

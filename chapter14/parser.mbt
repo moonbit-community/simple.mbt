@@ -973,12 +973,12 @@ fn Lexer::parse_number(self : Lexer) -> Type raise ParseError {
         "Syntax error: integer values cannot start with '0'",
       )
     }
-    let val = @strconv.parse_int64(view, base=10) catch {
+    let val = @string.parse_int64(view, base=10) catch {
       _ => raise ParseError::Msg("Syntax error, expected integer literal")
     }
     TypeInteger::constant(val)
   } else {
-    let val = @strconv.parse_double(view) catch {
+    let val = @string.parse_double(view) catch {
       _ => raise ParseError::Msg("Syntax error, expected float literal")
     }
     TypeFloat::constant(val)

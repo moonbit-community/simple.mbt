@@ -350,7 +350,7 @@ fn Lexer::parse_number(self : Lexer) -> Type raise ParseError {
       _ => ()
     }
   }
-  let val = @strconv.parse_int64(snum.to_string_view(), base=10) catch {
+  let val = @string.parse_int64(snum.to_string_view(), base=10) catch {
     _ => raise ParseError::Msg("Syntax error, expected integer literal")
   }
   TypeInteger::constant(val)
