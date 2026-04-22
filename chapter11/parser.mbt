@@ -714,7 +714,7 @@ fn Lexer::skip_white_space(self : Lexer) -> Unit {
 fn Lexer::match_syntax(self : Lexer, syntax : String) -> Bool {
   self.skip_white_space()
   let syntax_view = syntax.to_string_view()
-  let rest = try! self._input[self._position:]
+  let rest = self._input[self._position:]
   if rest.has_prefix(syntax_view) {
     self._position += syntax_view.length()
     true
@@ -788,7 +788,7 @@ fn Lexer::parse_number_string(self : Lexer) -> String {
     self._position += 1
   }
   let end = self._position
-  let view = try! self._input[start:end]
+  let view = self._input[start:end]
   view.to_string()
 }
 
@@ -834,7 +834,7 @@ fn Lexer::parse_id(self : Lexer) -> String {
     }
   }
   let end = self._position
-  let view = try! self._input[start:end]
+  let view = self._input[start:end]
   view.to_string()
 }
 
