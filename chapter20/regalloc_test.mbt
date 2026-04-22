@@ -11,8 +11,5 @@ test "chapter20: regalloc dump" {
     .local_sched()
     .reg_alloc(),
   )
-  inspect(
-    code.reg_alloc_dump(),
-    content="shli -> v0\naddi -> v1",
-  )
+  inspect(code.reg_alloc_dump(), content="shli -> v0\naddi -> v1")
 }

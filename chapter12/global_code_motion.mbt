@@ -2,7 +2,7 @@
 pub struct GlobalCodeMotion {}
 
 ///|
-let _global_code_motion : GlobalCodeMotion = GlobalCodeMotion::{}
+let _global_code_motion : GlobalCodeMotion = GlobalCodeMotion::{  }
 
 ///|
 pub fn GlobalCodeMotion::build_cfg(stop : Node) -> Unit {
@@ -52,14 +52,13 @@ fn GlobalCodeMotion::walk_unreach0(
 ) -> Unit {
   match n.kind {
     Start => ()
-    Region | Loop => {
+    Region | Loop =>
       for i = 1; i < n.n_ins(); i = i + 1 {
         match n.input(i) {
           Some(cfg) => GlobalCodeMotion::walk_unreach(cfg, visit, unreach)
           None => ()
         }
       }
-    }
     If | Never => {
       for use_ in n._outputs {
         match use_ {
@@ -129,7 +128,8 @@ fn GlobalCodeMotion::walk_infinite(
   }
   for use_ in n._outputs {
     match use_ {
-      Some(cfg) if cfg.is_cfg() => GlobalCodeMotion::walk_infinite(cfg, visit, stop)
+      Some(cfg) if cfg.is_cfg() =>
+        GlobalCodeMotion::walk_infinite(cfg, visit, stop)
       _ => ()
     }
   }
@@ -154,7 +154,8 @@ fn GlobalCodeMotion::sched_early() -> Unit {
         let len = cfg.n_outs()
         for i = 0; i < len; i = i + 1 {
           match cfg._outputs[i] {
-            Some(phi) if phi.kind == Phi => GlobalCodeMotion::sched_early0(phi, visit)
+            Some(phi) if phi.kind == Phi =>
+              GlobalCodeMotion::sched_early0(phi, visit)
             _ => ()
           }
         }
@@ -262,8 +263,8 @@ fn GlobalCodeMotion::sched_late0(
   // Walk Stores before Loads, so we can get the anti-deps right
   for use_ in n._outputs {
     match use_ {
-      Some(use_) if GlobalCodeMotion::is_forwards_edge(use_, n) && _is_mem_type(use_.ty()) =>
-        GlobalCodeMotion::sched_late0(use_, ns, late)
+      Some(use_) if GlobalCodeMotion::is_forwards_edge(use_, n) &&
+        _is_mem_type(use_.ty()) => GlobalCodeMotion::sched_late0(use_, ns, late)
       _ => ()
     }
   }
@@ -287,7 +288,8 @@ fn GlobalCodeMotion::sched_late0(
   let mut lca : Node? = None
   for use_ in n._outputs {
     match use_ {
-      Some(use_) => lca = Some(GlobalCodeMotion::use_block(n, use_, late).idom_lca(lca))
+      Some(use_) =>
+        lca = Some(GlobalCodeMotion::use_block(n, use_, late).idom_lca(lca))
       None => ()
     }
   }
@@ -317,7 +319,11 @@ fn GlobalCodeMotion::sched_late0(
 }
 
 ///|
-fn GlobalCodeMotion::use_block(n : Node, user : Node, late : Array[Node?]) -> Node {
+fn GlobalCodeMotion::use_block(
+  n : Node,
+  user : Node,
+  late : Array[Node?],
+) -> Node {
   if user.kind != Phi {
     match late[user._nid] {
       Some(cfg) => cfg
@@ -345,7 +351,9 @@ fn GlobalCodeMotion::use_block(n : Node, user : Node, late : Array[Node?]) -> No
 ///|
 fn GlobalCodeMotion::better(lca : Node, best : Node) -> Bool {
   lca.loop_depth() < best.loop_depth() ||
-  (lca.idepth() > best.idepth() || best.kind == If || best.kind == Never)
+  lca.idepth() > best.idepth() ||
+  best.kind == If ||
+  best.kind == Never
 }
 
 ///|
@@ -398,7 +406,14 @@ fn GlobalCodeMotion::find_anti_dep(
     match use_ {
       Some(st) if st.kind == Store =>
         match late[st._nid] {
-          Some(stblk) => lca0 = GlobalCodeMotion::anti_dep(load, stblk, st.cfg0(), lca0, Some(st))
+          Some(stblk) =>
+            lca0 = GlobalCodeMotion::anti_dep(
+              load,
+              stblk,
+              st.cfg0(),
+              lca0,
+              Some(st),
+            )
           None => ()
         }
       Some(phi) if phi.kind == Phi => {
@@ -406,7 +421,14 @@ fn GlobalCodeMotion::find_anti_dep(
         for i = 1; i < phi.n_ins(); i = i + 1 {
           if phi.input(i) == Some(mem) {
             match region.input(i) {
-              Some(stblk) => lca0 = GlobalCodeMotion::anti_dep(load, stblk, mem.cfg0(), lca0, None)
+              Some(stblk) =>
+                lca0 = GlobalCodeMotion::anti_dep(
+                  load,
+                  stblk,
+                  mem.cfg0(),
+                  lca0,
+                  None,
+                )
               None => ()
             }
           }

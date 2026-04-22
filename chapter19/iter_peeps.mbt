@@ -140,7 +140,7 @@ let mid_assert_flag : Ref[Bool] = Ref::{ val: false }
 pub struct IterPeeps {}
 
 ///|
-let _iter_peeps : IterPeeps = IterPeeps::{}
+let _iter_peeps : IterPeeps = IterPeeps::{  }
 
 ///|
 pub fn IterPeeps::mid_assert() -> Bool {

@@ -1,6 +1,6 @@
 ///|
 fn eval_int(stop : Node, parameter : Int64) -> Int64 raise {
-  match Evaluator::evaluate(stop, parameter=parameter) {
+  match Evaluator::evaluate(stop, parameter~) {
     EvalValue::Int(v) => v
     _ => fail("expected int")
   }

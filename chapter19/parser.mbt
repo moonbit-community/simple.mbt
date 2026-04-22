@@ -87,7 +87,14 @@ pub fn Parser::parse(
   self._scope.push()
 
   // Placeholder top scope bindings; the whole program is parsed as a function body.
-  ignore(self._scope.define_(scope_ctrl, control, false, Node::new_cproj(start.val, 0, scope_ctrl).peephole()))
+  ignore(
+    self._scope.define_(
+      scope_ctrl,
+      control,
+      false,
+      Node::new_cproj(start.val, 0, scope_ctrl).peephole(),
+    ),
+  )
   let mem = Node::new_mem()
   ignore(mem.add_def(None))
   ignore(mem.add_def(Some(Node::new_proj(start.val, 1, scope_mem0).peephole())))
@@ -101,10 +108,10 @@ pub fn Parser::parse(
     ),
   )
 
-    // Start parsing with dead control (matches refs/simple).
+  // Start parsing with dead control (matches refs/simple).
   ignore(self._scope.set_def(0, Some(xctrl.val)))
 
-// Parse whole program, as-if function header "{ int arg -> body }".
+  // Parse whole program, as-if function header "{ int arg -> body }".
   let ret = self.parse_function_body(main_sig.val, self._lexer, [scope_arg0])
   match ret._ret_fun {
     Some(fun) => fun._fun_name = Some("main")
@@ -213,13 +220,7 @@ fn Parser::parse_function_body(
         ids[i],
         t,
         false,
-        Node::new_parm(
-          ids[i],
-          i + 2,
-          t,
-          fun,
-          Node::new_constant(t).peephole(),
-        ).peephole(),
+        Node::new_parm(ids[i], i + 2, t, fun, Node::new_constant(t).peephole()).peephole(),
       ),
     )
   }
@@ -267,7 +268,12 @@ fn Parser::parse_function_body(
 
 ///|
 /// Add a function return exit to the current parsing function.
-fn Parser::fun_add_return(self : Parser, ctrl : Node, rmem : Node, expr : Node) -> Unit {
+fn Parser::fun_add_return(
+  self : Parser,
+  ctrl : Node,
+  rmem : Node,
+  expr : Node,
+) -> Unit {
   let fun = match self._fun {
     Some(fun) => fun
     None => panic()
@@ -441,11 +447,7 @@ fn Parser::parse_trinary(
   // Parse true side
   ignore(self._scope.set_def(0, Some(if_t.unkeep())))
   self._scope.add_guards(if_t, Some(pred), false)
-  let lhs0 = if stmt {
-    self.parse_statement()
-  } else {
-    self.parse_asgn()
-  }
+  let lhs0 = if stmt { self.parse_statement() } else { self.parse_asgn() }
   let mut lhs = lhs0.keep()
   self._scope.remove_guards(if_t)
   // Match refs/simple: one-sided defs are errors; forward refs get copied across arms.
@@ -720,7 +722,11 @@ fn Parser::type_fun_ptr(self : Parser) -> Type? {
     let nilable = self._lexer.match_syntax("?")
     return Some(
       FunPtr({
-        _nil: if nilable { 3 } else { 2 },
+        _nil: if nilable {
+          3
+        } else {
+          2
+        },
         _sig: Some([]),
         _ret: t0,
         _fidxs: -1L,
@@ -747,7 +753,11 @@ fn Parser::type_fun_ptr(self : Parser) -> Type? {
       let nilable = self._lexer.match_syntax("?")
       return Some(
         FunPtr({
-          _nil: if nilable { 3 } else { 2 },
+          _nil: if nilable {
+            3
+          } else {
+            2
+          },
           _sig: Some(ts),
           _ret: ret,
           _fidxs: -1L,
@@ -769,6 +779,7 @@ fn Parser::type_fun_ptr(self : Parser) -> Type? {
   None
 }
 
+///|
 /// True if a TypeFunPtr, without advancing parser.
 fn Parser::is_type_fun(self : Parser) -> Bool {
   let old = self._lexer._position
@@ -778,6 +789,7 @@ fn Parser::is_type_fun(self : Parser) -> Bool {
 }
 
 ///|
+
 ///|
 fn Parser::parse_type(self : Parser) -> Type? raise ParseError {
   let old1 = self._lexer._position
@@ -1640,7 +1652,9 @@ fn Parser::function_call(self : Parser, expr : Node) -> Node raise ParseError {
     raise ParseError::Msg("Calling a null function pointer")
   }
   if expr.kind != FRef && !expr.ty().isa(type_funptr_bot) {
-    raise ParseError::Msg("Expected a function but got \{expr.ty().glb().str()}")
+    raise ParseError::Msg(
+      "Expected a function but got \{expr.ty().glb().str()}",
+    )
   }
   ignore(expr.keep())
 

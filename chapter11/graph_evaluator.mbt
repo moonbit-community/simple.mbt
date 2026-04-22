@@ -91,8 +91,8 @@ fn GraphEvaluator::_find_control(control : Node) -> Node? {
 fn GraphEvaluator::_find_projection(node : Node, idx : Int) -> Node? {
   for user in node._outputs {
     match user {
-      Some(proj) if (proj.kind == Proj || proj.kind == CProj) && proj._proj_idx == idx =>
-        return Some(proj)
+      Some(proj) if (proj.kind == Proj || proj.kind == CProj) &&
+        proj._proj_idx == idx => return Some(proj)
       _ => ()
     }
   }

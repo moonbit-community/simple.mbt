@@ -1,6 +1,8 @@
 ///|
 fn expect_codegen_error(source : String, expected : String) -> Unit raise {
-  let result : Result[CodeGen, ParseError] = try? CodeGen::new(source).parse().opto()
+  let result : Result[CodeGen, ParseError] = try? CodeGen::new(source)
+    .parse()
+    .opto()
   match result {
     Err(ParseError::Msg(msg)) => assert_eq(msg, expected)
     Ok(_) => fail("expected ParseError")
@@ -9,8 +11,10 @@ fn expect_codegen_error(source : String, expected : String) -> Unit raise {
 
 ///|
 fn expect_type_error(source : String, expected : String) -> Unit raise {
-  let result : Result[CodeGen, ParseError] =
-    try? CodeGen::new(source).parse().opto().type_check()
+  let result : Result[CodeGen, ParseError] = try? CodeGen::new(source)
+    .parse()
+    .opto()
+    .type_check()
   match result {
     Err(ParseError::Msg(msg)) => assert_eq(msg, expected)
     Ok(_) => fail("expected ParseError")
@@ -267,10 +271,7 @@ test "chapter19: inst_select basic15" {
 
 ///|
 test "chapter19: inst_select basic16" {
-  let code = CodeGen::new(
-    "int arg1 =  arg + 1;\n" +
-    "return arg1 / arg;",
-  )
+  let code = CodeGen::new("int arg1 =  arg + 1;\n" + "return arg1 / arg;")
   ignore(
     code
     .parse()
@@ -285,10 +286,7 @@ test "chapter19: inst_select basic16" {
 
 ///|
 test "chapter19: inst_select basic17" {
-  let code = CodeGen::new(
-    "int arg1 =  arg + 1;\n" +
-    "return arg1 * arg;\n",
-  )
+  let code = CodeGen::new("int arg1 =  arg + 1;\n" + "return arg1 * arg;\n")
   ignore(
     code
     .parse()
@@ -303,10 +301,7 @@ test "chapter19: inst_select basic17" {
 
 ///|
 test "chapter19: inst_select basic18" {
-  let code = CodeGen::new(
-    "int arg1 =  arg + 1;\n" +
-    "return arg1 << arg;\n",
-  )
+  let code = CodeGen::new("int arg1 =  arg + 1;\n" + "return arg1 << arg;\n")
   ignore(
     code
     .parse()
@@ -321,10 +316,7 @@ test "chapter19: inst_select basic18" {
 
 ///|
 test "chapter19: inst_select basic19" {
-  let code = CodeGen::new(
-    "int arg1 =  arg + 1;\n" +
-    "return arg1 >> arg;\n",
-  )
+  let code = CodeGen::new("int arg1 =  arg + 1;\n" + "return arg1 >> arg;\n")
   ignore(
     code
     .parse()
@@ -339,10 +331,7 @@ test "chapter19: inst_select basic19" {
 
 ///|
 test "chapter19: inst_select basic20" {
-  let code = CodeGen::new(
-    "int arg1 =  arg + 1;\n" +
-    "return arg1 >>> arg;\n",
-  )
+  let code = CodeGen::new("int arg1 =  arg + 1;\n" + "return arg1 >>> arg;\n")
   ignore(
     code
     .parse()
@@ -446,8 +435,7 @@ test "chapter19: phi parallel assign" {
 ///|
 test "chapter19: type0" {
   let code = CodeGen::new(
-    "{int -> int}? x2 = null; // null function ptr\n" +
-    "return x2;\n",
+    "{int -> int}? x2 = null; // null function ptr\n" + "return x2;\n",
   )
   ignore(code.parse().opto())
   assert_eq(code.print(), "return null;")
@@ -457,10 +445,7 @@ test "chapter19: type0" {
 ///|
 test "chapter19: fcn0" {
   let code = CodeGen::new(
-    "{int -> int}? sq = { int x ->\n" +
-    "    x*x;\n" +
-    "};\n" +
-    "return sq;\n",
+    "{int -> int}? sq = { int x ->\n" + "    x*x;\n" + "};\n" + "return sq;\n",
   )
   ignore(code.parse().opto())
   assert_eq(code.print(), "Stop[ return { sq}; return (Parm_x(sq,int)*x); ]")
@@ -470,10 +455,7 @@ test "chapter19: fcn0" {
 ///|
 test "chapter19: fcn1" {
   let code = CodeGen::new(
-    "var sq = { int x ->\n" +
-    "    x*x;\n" +
-    "};\n" +
-    "return sq(arg)+sq(3);\n",
+    "var sq = { int x ->\n" + "    x*x;\n" + "};\n" + "return sq(arg)+sq(3);\n",
   )
   ignore(code.parse().opto().type_check().gcm().local_sched())
   assert_eq(
@@ -645,8 +627,7 @@ test "chapter19: err2" {
 ///|
 test "chapter19: err3" {
   expect_type_error(
-    "val f = { int i, int j -> return i+j; };\n" +
-    "return f();\n",
+    "val f = { int i, int j -> return i+j; };\n" + "return f();\n",
     "Expecting 2 arguments, but found 0",
   )
 }
@@ -669,10 +650,7 @@ test "chapter19: err4" {
 ///|
 test "chapter19: err5" {
   expect_type_error(
-    "val g = { ->\n" +
-    "    g();\n" +
-    "};\n" +
-    "return 0;\n",
+    "val g = { ->\n" + "    g();\n" + "};\n" + "return 0;\n",
     "No defined return type",
   )
 }

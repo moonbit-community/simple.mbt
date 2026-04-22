@@ -664,7 +664,6 @@ fn Parser::parse_asgn(self : Parser) -> Node raise ParseError {
   expr.unkeep()
 }
 
-
 // Make finals deep; widen ints to floats; narrow wide int types.
 // Early error if types do not match variable.
 
@@ -722,7 +721,6 @@ fn Parser::widen_int(self : Parser, expr : Node, t : Type) -> Node {
   }
 }
 
-
 ///|
 fn Parser::parse_declaration_statement(self : Parser) -> Node raise ParseError {
   match self.parse_type() {
@@ -755,7 +753,8 @@ fn Parser::parse_declaration(self : Parser, t0 : Type) -> Node raise ParseError 
     // - BOTTOM is var and var is always not-final
     // - pointers are final by default (unless explicitly ! or initialized with null)
     xfinal = t == top ||
-      (t != bottom &&
+      (
+        t != bottom &&
         !has_bang &&
         expr.ty() != type_nil &&
         (match t {
@@ -763,7 +762,8 @@ fn Parser::parse_declaration(self : Parser, t0 : Type) -> Node raise ParseError 
           MemPtr(_, _) => true
           FunPtr(_) => true
           _ => false
-        }))
+        })
+      )
     // var/val: infer type from expression
     if infer_type {
       if expr.ty() == type_nil {
@@ -796,24 +796,9 @@ fn Parser::parse_declaration(self : Parser, t0 : Type) -> Node raise ParseError 
       raise ParseError::Msg(self.error_syntax("=expression"))
     }
     let init_ty = match t {
-      Ptr(nil) =>
-        if nil == 0 || nil == 3 {
-          type_nil
-        } else {
-          top
-        }
-      MemPtr(_, nil) =>
-        if nil == 0 || nil == 3 {
-          type_nil
-        } else {
-          top
-        }
-      FunPtr(fp) =>
-        if fp._nil == 0 || fp._nil == 3 {
-          type_nil
-        } else {
-          top
-        }
+      Ptr(nil) => if nil == 0 || nil == 3 { type_nil } else { top }
+      MemPtr(_, nil) => if nil == 0 || nil == 3 { type_nil } else { top }
+      FunPtr(fp) => if fp._nil == 0 || fp._nil == 3 { type_nil } else { top }
       Int(_) => type_integer_zero
       Flt(_) => type_float_zero
       _ => bottom
@@ -835,7 +820,6 @@ fn Parser::parse_declaration(self : Parser, t0 : Type) -> Node raise ParseError 
   }
   lift
 }
-
 
 ///|
 fn Parser::parse_expression(self : Parser) -> Node raise ParseError {
@@ -1173,13 +1157,7 @@ fn Parser::new_struct(
       },
     )
   }
-  let nnn = Node::new_new(
-      MemPtr(obj, 2),
-      self._scope.ctrl(),
-      size,
-      mems,
-      inits,
-    )
+  let nnn = Node::new_new(MemPtr(obj, 2), self._scope.ctrl(), size, mems, inits)
     .peephole()
     .keep()
   for i = 0; i < fields.length(); i = i + 1 {

@@ -2,7 +2,7 @@
 pub struct Eval2 {}
 
 ///|
-let _eval2 : Eval2 = Eval2::{}
+let _eval2 : Eval2 = Eval2::{  }
 
 ///|
 priv enum Eval2Value {
@@ -297,7 +297,7 @@ fn uctrl(cfg : Node) -> Node? {
       for use_ in cfg._outputs {
         match use_ {
           Some(n) if n.is_cfg() &&
-              (n.kind == Region || n.kind == Loop || n.cfg0() == cfg) =>
+            (n.kind == Region || n.kind == Loop || n.cfg0() == cfg) =>
             return Some(n)
           _ => ()
         }
@@ -380,37 +380,61 @@ fn compute(n : Node) -> Eval2Value? {
     BoolEqF =>
       Some(
         Eval2Value::Int(
-          if d(n.input_exn(1)) == d(n.input_exn(2)) { 1L } else { 0L },
+          if d(n.input_exn(1)) == d(n.input_exn(2)) {
+            1L
+          } else {
+            0L
+          },
         ),
       )
     BoolEq =>
       Some(
         Eval2Value::Int(
-          if val_eq(val(n.input_exn(1)), val(n.input_exn(2))) { 1L } else { 0L },
+          if val_eq(val(n.input_exn(1)), val(n.input_exn(2))) {
+            1L
+          } else {
+            0L
+          },
         ),
       )
     BoolLtF =>
       Some(
         Eval2Value::Int(
-          if d(n.input_exn(1)) < d(n.input_exn(2)) { 1L } else { 0L },
+          if d(n.input_exn(1)) < d(n.input_exn(2)) {
+            1L
+          } else {
+            0L
+          },
         ),
       )
     BoolLt =>
       Some(
         Eval2Value::Int(
-          if x(n.input_exn(1)) < x(n.input_exn(2)) { 1L } else { 0L },
+          if x(n.input_exn(1)) < x(n.input_exn(2)) {
+            1L
+          } else {
+            0L
+          },
         ),
       )
     BoolLeF =>
       Some(
         Eval2Value::Int(
-          if d(n.input_exn(1)) <= d(n.input_exn(2)) { 1L } else { 0L },
+          if d(n.input_exn(1)) <= d(n.input_exn(2)) {
+            1L
+          } else {
+            0L
+          },
         ),
       )
     BoolLe =>
       Some(
         Eval2Value::Int(
-          if x(n.input_exn(1)) <= x(n.input_exn(2)) { 1L } else { 0L },
+          if x(n.input_exn(1)) <= x(n.input_exn(2)) {
+            1L
+          } else {
+            0L
+          },
         ),
       )
     Cast => val(n.input_exn(1))
@@ -437,8 +461,7 @@ fn compute(n : Node) -> Eval2Value? {
     MulF => Some(Eval2Value::Float(d(n.input_exn(1)) * d(n.input_exn(2))))
     Mul => Some(Eval2Value::Int(x(n.input_exn(1)) * x(n.input_exn(2))))
     New => alloc(n)
-    Not =>
-      Some(Eval2Value::Int(if x(n.input_exn(1)) == 0L { 1L } else { 0L }))
+    Not => Some(Eval2Value::Int(if x(n.input_exn(1)) == 0L { 1L } else { 0L }))
     Or => Some(Eval2Value::Int(x(n.input_exn(1)) | x(n.input_exn(2))))
     Proj =>
       match n.ty() {
@@ -463,8 +486,7 @@ fn compute(n : Node) -> Eval2Value? {
       Some(
         Eval2Value::Int(
           (x(n.input_exn(1)).reinterpret_as_uint64() >>
-            x(n.input_exn(2)).land(63L).to_int())
-            .reinterpret_as_int64(),
+          x(n.input_exn(2)).land(63L).to_int()).reinterpret_as_int64(),
         ),
       )
     Store => store(n)
@@ -614,9 +636,18 @@ fn print_value(
   visit : Map[Int, Bool],
 ) -> Unit {
   match v {
-    Some(Eval2Value::Str(s)) => { sb.write_string(s); return }
-    Some(Eval2Value::TypeVal(tv)) => { sb.write_string(tv.str()); return }
-    None => { sb.write_string("null"); return }
+    Some(Eval2Value::Str(s)) => {
+      sb.write_string(s)
+      return
+    }
+    Some(Eval2Value::TypeVal(tv)) => {
+      sb.write_string(tv.str())
+      return
+    }
+    None => {
+      sb.write_string("null")
+      return
+    }
     _ => ()
   }
 
@@ -641,7 +672,10 @@ fn print_value(
       }
       let ptr = match v {
         Some(Eval2Value::Obj(obj)) => obj
-        _ => { sb.write_string("null"); return }
+        _ => {
+          sb.write_string("null")
+          return
+        }
       }
       if visit.contains(ptr.val.id) {
         sb.write_string("$cyclic")
@@ -680,7 +714,10 @@ fn print_value(
 
       let fields = match obj._fields {
         Some(fields) => fields
-        None => { sb.write_string(obj._name); return }
+        None => {
+          sb.write_string(obj._name)
+          return
+        }
       }
       sb.write_string(obj._name)
       sb.write_string("{")
@@ -733,7 +770,9 @@ pub fn Eval2::eval(code : CodeGen, arg : Int64, loops? : Int = 1000) -> String {
 
   let mut bb = code._start
   let mut prior : Node? = None
-  ignore(frame_put(frame, bb, Eval2Value::Closure(closure_new(code._stop, frame))))
+  ignore(
+    frame_put(frame, bb, Eval2Value::Closure(closure_new(code._stop, frame))),
+  )
 
   let mut loop_cnt = 0
   while true {

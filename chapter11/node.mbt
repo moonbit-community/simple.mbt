@@ -72,7 +72,9 @@ pub let start : Ref[Node] = Ref::{
 pub let zero : Ref[Node] = Ref::{ val: Node::new_constant(type_integer_zero) }
 
 ///|
-pub let xctrl : Ref[Node] = Ref::{ val: Node::new_raw(XCtrl, [Some(start.val)]) }
+pub let xctrl : Ref[Node] = Ref::{
+  val: Node::new_raw(XCtrl, [Some(start.val)]),
+}
 
 ///|
 pub let disable_peephole : Ref[Bool] = Ref::{ val: false }
@@ -367,7 +369,11 @@ pub fn Node::new_loop(entry : Node?) -> Node {
 }
 
 ///|
-pub fn Node::new_phi(label : String, declared_type : Type, inputs : Array[Node?]) -> Node {
+pub fn Node::new_phi(
+  label : String,
+  declared_type : Type,
+  inputs : Array[Node?],
+) -> Node {
   let node = Node::new_raw(Phi, inputs)
   node._phi_label = label
   node._declared_type = declared_type
@@ -928,7 +934,7 @@ fn Node::idepth(self : Node) -> Int {
       } else {
         let mut d = 0
         match self.kind {
-          Stop | Region => {
+          Stop | Region =>
             for input in self._inputs {
               match input {
                 Some(cfg) => {
@@ -940,7 +946,6 @@ fn Node::idepth(self : Node) -> Int {
                 None => ()
               }
             }
-          }
           Loop =>
             match self.input(1) {
               Some(entry) => d = entry.idepth() + 1
@@ -1185,11 +1190,15 @@ pub fn Node::compute(self : Node) -> Type {
       }
       self.input_exn(1).ty()
     }
-    Phi => {
+    Phi =>
       match self.input(0) {
         Some(region) =>
           if region.kind != Region && region.kind != Loop {
-            if region.ty() == xcontrol { top } else { self.ty() }
+            if region.ty() == xcontrol {
+              top
+            } else {
+              self.ty()
+            }
           } else if region.in_progress() {
             self._declared_type
           } else {
@@ -1203,7 +1212,6 @@ pub fn Node::compute(self : Node) -> Type {
           }
         None => bottom
       }
-    }
     Add => {
       let t1 = self.input_exn(1).ty()
       let t2 = self.input_exn(2).ty()
@@ -1280,7 +1288,12 @@ pub fn Node::compute(self : Node) -> Type {
             TypeInteger::constant(1L)
           } else {
             match t1 {
-              MemPtr(_, nil) => if !nil { TypeInteger::constant(0L) } else { type_integer_bot }
+              MemPtr(_, nil) =>
+                if !nil {
+                  TypeInteger::constant(0L)
+                } else {
+                  type_integer_bot
+                }
               _ => type_integer_bot
             }
           }
@@ -1543,9 +1556,7 @@ fn Node::idealize_load(self : Node) -> Node? {
   }
 
   // Push a Load up through a Phi, as long as it collapses on at least one arm.
-  if mem.kind == Phi &&
-    mem.input_exn(0).ty() == control &&
-    mem.n_ins() == 3 {
+  if mem.kind == Phi && mem.input_exn(0).ty() == control && mem.n_ins() == 3 {
     let memphi = mem
     let region = memphi.input_exn(0)
     let profit = fn(idx : Int) -> Bool {
@@ -1573,11 +1584,11 @@ fn Node::idealize_load(self : Node) -> Node? {
         ptr,
       ).peephole()
       return Some(
-        Node::new_phi(
-          self._memop_name,
-          self._declared_type,
-          [Some(region), Some(ld1), Some(ld2)],
-        ),
+        Node::new_phi(self._memop_name, self._declared_type, [
+          Some(region),
+          Some(ld1),
+          Some(ld2),
+        ]),
       )
     }
   }
@@ -1605,7 +1616,11 @@ fn Node::idealize_proj(self : Node) -> Node? {
       Node::new_cproj(
         iff,
         1 - self._proj_idx,
-        if self._proj_idx == 0 { "False" } else { "True" },
+        if self._proj_idx == 0 {
+          "False"
+        } else {
+          "True"
+        },
       ),
     )
   }
@@ -1667,8 +1682,7 @@ fn Node::idealize_region(self : Node) -> Node? {
     return None
   }
   let path = self.find_dead_input()
-  if path != 0 &&
-    !(self.kind == Loop && self.input(1) == self.input(path)) {
+  if path != 0 && !(self.kind == Loop && self.input(1) == self.input(path)) {
     // Cannot use the obvious output iterator here, because a Phi deleting an
     // input might recursively delete itself. This shuffles the output array,
     // and we might miss iterating an unrelated Phi.
@@ -1744,7 +1758,8 @@ fn Node::single_unique_input(self : Node) -> Node? {
   }
   let mut live : Node? = None
   for i = 1; i < self.n_ins(); i = i + 1 {
-    if region.input_exn(i).add_dep(self).ty() != xcontrol && self.input_exn(i) != self {
+    if region.input_exn(i).add_dep(self).ty() != xcontrol &&
+      self.input_exn(i) != self {
       let in_i = self.input_exn(i)
       match live {
         None => live = Some(in_i)
@@ -1862,12 +1877,7 @@ pub fn Node::idealize(self : Node) -> Node? {
 pub fn Node::set_type(self : Node, typ : Type) -> Type? {
   let old = self._type
   match old {
-    Some(o) =>
-      if !typ.isa(o) {
-        panic()
-      } else if o == typ {
-        return old
-      }
+    Some(o) => if !typ.isa(o) { panic() } else if o == typ { return old }
     None => ()
   }
   self._type = Some(typ)
@@ -1944,11 +1954,14 @@ pub fn Node::add_return(self : Node, node : Node) -> Node {
 }
 
 ///|
-pub fn Node::iterate(self : Node, show? : Bool = false) -> Node raise ParseError {
+pub fn Node::iterate(
+  self : Node,
+  show? : Bool = false,
+) -> Node raise ParseError {
   if self.kind != Stop {
     panic()
   }
-  let stop = IterPeeps::iterate(self, show=show)
+  let stop = IterPeeps::iterate(self, show~)
   match stop.walk_err() {
     Some(err) => raise ParseError::Msg(err)
     None => ()
@@ -1964,7 +1977,11 @@ fn Node::err(self : Node) -> String? {
       match ptr {
         Bot => Some("Might be null accessing '\{self._memop_name}'")
         MemPtr(_, nil) =>
-          if nil { Some("Might be null accessing '\{self._memop_name}'") } else { None }
+          if nil {
+            Some("Might be null accessing '\{self._memop_name}'")
+          } else {
+            None
+          }
         _ => None
       }
     }
@@ -2479,12 +2496,15 @@ pub fn Node::upcast_(
   if ctrl.ty() == xcontrol {
     return None
   }
-  let pred =
-    if invert {
-      if pred.kind == Not { pred.input_exn(1) } else { Node::new_not(pred).peephole() }
+  let pred = if invert {
+    if pred.kind == Not {
+      pred.input_exn(1)
     } else {
-      pred
+      Node::new_not(pred).peephole()
     }
+  } else {
+    pred
+  }
 
   // Direct use of a value as predicate. This is a zero/null test.
   if _find_use(self._inputs, Some(pred)) != -1 {

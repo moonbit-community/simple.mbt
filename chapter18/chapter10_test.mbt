@@ -150,10 +150,7 @@ test "chapter10: if or null" {
     "return bar;\n",
   )
   let stop = parser.parse(show=false).iterate()
-  assert_eq(
-    stop.print(),
-    "return Phi(Region,null,Bar);",
-  )
+  assert_eq(stop.print(), "return Phi(Region,null,Bar);")
 }
 
 ///|
@@ -273,13 +270,10 @@ test "chapter10: test3" {
 ///|
 test "chapter10: bug3" {
   expect_parse_error(
-    "struct s0 { int f0; };\n" +
-    "return new s0;\n" +
-    "int v0=null.f0;\n",
+    "struct s0 { int f0; };\n" + "return new s0;\n" + "int v0=null.f0;\n",
     "Accessing unknown field 'f0' from 'null'",
   )
 }
-
 
 ///|
 test "chapter10: bug4" {

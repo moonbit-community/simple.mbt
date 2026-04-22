@@ -83,7 +83,11 @@ fn Evaluator::find_start(visited : Array[Bool], node : Node?) -> Node? {
 }
 
 ///|
-fn Evaluator::collect_nodes(nodes : Array[Node?], visited : Array[Bool], n : Node) -> Unit {
+fn Evaluator::collect_nodes(
+  nodes : Array[Node?],
+  visited : Array[Bool],
+  n : Node,
+) -> Unit {
   _ensure_bool(visited, n._nid)
   if visited[n._nid] {
     return
@@ -195,7 +199,11 @@ fn Evaluator::ensure_values(self : Evaluator, nid : Int) -> Unit {
 }
 
 ///|
-fn Evaluator::set_value(self : Evaluator, node : Node, value : EvalValue) -> Unit {
+fn Evaluator::set_value(
+  self : Evaluator,
+  node : Node,
+  value : EvalValue,
+) -> Unit {
   self.ensure_values(node._nid)
   self.values[node._nid] = Some(value)
 }
@@ -261,7 +269,8 @@ fn Evaluator::eq(lhs : EvalValue, rhs : EvalValue) -> Bool {
     (EvalValue::Null, EvalValue::Null) => true
     (EvalValue::Int(a), EvalValue::Int(b)) => a == b
     (EvalValue::Obj(a), EvalValue::Obj(b)) => a.id == b.id
-    (EvalValue::Null, EvalValue::Obj(_)) | (EvalValue::Obj(_), EvalValue::Null) => false
+    (EvalValue::Null, EvalValue::Obj(_))
+    | (EvalValue::Obj(_), EvalValue::Null) => false
     _ => false
   }
 }
@@ -304,10 +313,13 @@ fn Evaluator::exec(self : Evaluator, node : Node) -> EvalValue {
       if rhs == 0L {
         EvalValue::Int(0L)
       } else {
-        EvalValue::Int(Evaluator::as_int(self.get_value(node.input_exn(1))) / rhs)
+        EvalValue::Int(
+          Evaluator::as_int(self.get_value(node.input_exn(1))) / rhs,
+        )
       }
     }
-    Minus => EvalValue::Int(-Evaluator::as_int(self.get_value(node.input_exn(1))))
+    Minus =>
+      EvalValue::Int(-Evaluator::as_int(self.get_value(node.input_exn(1))))
     Not =>
       EvalValue::Int(
         if Evaluator::is_true(self.get_value(node.input_exn(1))) {
@@ -319,9 +331,9 @@ fn Evaluator::exec(self : Evaluator, node : Node) -> EvalValue {
     BoolEq =>
       EvalValue::Int(
         if Evaluator::eq(
-          self.get_value(node.input_exn(1)),
-          self.get_value(node.input_exn(2)),
-        ) {
+            self.get_value(node.input_exn(1)),
+            self.get_value(node.input_exn(2)),
+          ) {
           1L
         } else {
           0L
@@ -384,11 +396,10 @@ fn Evaluator::exec(self : Evaluator, node : Node) -> EvalValue {
 fn Evaluator::exec_anchor(self : Evaluator, anchor : Node) -> Unit {
   match self.schedule.get(anchor._nid) {
     None => ()
-    Some(nodes) => {
+    Some(nodes) =>
       for n in nodes {
         ignore(self.exec(n))
       }
-    }
   }
 }
 
@@ -407,8 +418,8 @@ fn Evaluator::find_control(control : Node) -> Node? {
 fn Evaluator::find_projection(node : Node, idx : Int) -> Node? {
   for user in node._outputs {
     match user {
-      Some(proj) if (proj.kind == Proj || proj.kind == CProj) && proj._proj_idx == idx =>
-        return Some(proj)
+      Some(proj) if (proj.kind == Proj || proj.kind == CProj) &&
+        proj._proj_idx == idx => return Some(proj)
       _ => ()
     }
   }
@@ -459,7 +470,10 @@ fn Evaluator::run(
   let start_ty = start.compute()
   let start_tuple = match start_ty {
     Tuple(types) => {
-      let vals : Array[EvalValue] = Array::make(types.length(), EvalValue::Mem(-1))
+      let vals : Array[EvalValue] = Array::make(
+        types.length(),
+        EvalValue::Mem(-1),
+      )
       if types.length() > 0 {
         vals[0] = EvalValue::Mem(-1)
       }
@@ -496,7 +510,14 @@ fn Evaluator::run(
       If | Never => {
         self.exec_anchor(ctrl_node)
         let pred = self.get_value(ctrl_node.input_exn(1))
-        Evaluator::find_projection(ctrl_node, if Evaluator::is_true(pred) { 0 } else { 1 })
+        Evaluator::find_projection(
+          ctrl_node,
+          if Evaluator::is_true(pred) {
+            0
+          } else {
+            1
+          },
+        )
       }
       Return => {
         self.exec_anchor(ctrl_node)

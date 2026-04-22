@@ -42,22 +42,14 @@ fn assoc(t0 : Type, t1 : Type, t2 : Type) -> Unit raise {
 
 ///|
 test "chapter10: type adhoc" {
-  let s1 =
-    TypeStruct::make(
-      "s1",
-      [
-        Field::make("a", type_integer_bot, -1, false),
-        Field::make("b", type_integer_bot, -2, false),
-      ],
-    )
-  let s2 =
-    TypeStruct::make(
-      "s2",
-      [
-        Field::make("a", type_integer_bot, -3, false),
-        Field::make("b", type_integer_bot, -4, false),
-      ],
-    )
+  let s1 = TypeStruct::make("s1", [
+    Field::make("a", type_integer_bot, -1, false),
+    Field::make("b", type_integer_bot, -2, false),
+  ])
+  let s2 = TypeStruct::make("s2", [
+    Field::make("a", type_integer_bot, -3, false),
+    Field::make("b", type_integer_bot, -4, false),
+  ])
   assert_eq(s1, s1.glb())
   assert_true(s1 != s1.dual())
   assert_eq(s1, s1.dual().glb())

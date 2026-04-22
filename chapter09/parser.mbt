@@ -268,10 +268,9 @@ fn Parser::parse_comparison(self : Parser) -> Node raise ParseError {
     if self._lexer.match_syntax("==") {
       lhs = Node::new_bool_eq(lhs, self.parse_addition()).peephole()
     } else if self._lexer.match_syntax("!=") {
-      lhs =
-        Node::new_not(
-          Node::new_bool_eq(lhs, self.parse_addition()).peephole(),
-        ).peephole()
+      lhs = Node::new_not(
+        Node::new_bool_eq(lhs, self.parse_addition()).peephole(),
+      ).peephole()
     } else if self._lexer.match_syntax("<=") {
       lhs = Node::new_bool_le(lhs, self.parse_addition()).peephole()
     } else if self._lexer.match_syntax("<") {

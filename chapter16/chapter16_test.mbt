@@ -30,7 +30,10 @@ test "chapter16: multi1" {
 
 ///|
 test "chapter16: final0" {
-  expect_iterate_error("int !x=2;\n" + "x=3;\n" + "return x;\n", "Cannot reassign final 'x'")
+  expect_iterate_error(
+    "int !x=2;\n" + "x=3;\n" + "return x;\n",
+    "Cannot reassign final 'x'",
+  )
 }
 
 ///|
@@ -85,7 +88,9 @@ test "chapter16: struct final" {
   )
   let stop = parser.parse(show=false).iterate()
   assert_eq(stop.print(), "return Point;")
-  assert_obj_int_fields(Evaluator::evaluate(stop, parameter=0L), "Point", [3L, 4L])
+  assert_obj_int_fields(Evaluator::evaluate(stop, parameter=0L), "Point", [
+    3L, 4L,
+  ])
 }
 
 ///|
@@ -160,7 +165,13 @@ test "chapter16: square" {
       assert_eq(obj.fields.length(), 2)
       match obj.fields[0] {
         EvalValue::Float(v) =>
-          assert_true(v.is_close(3.0, relative_tolerance=1.0e-12, absolute_tolerance=1.0e-12))
+          assert_true(
+            v.is_close(
+              3.0,
+              relative_tolerance=1.0e-12,
+              absolute_tolerance=1.0e-12,
+            ),
+          )
         _ => fail("expected float field")
       }
       match obj.fields[1] {
@@ -181,16 +192,27 @@ test "chapter16: square" {
     EvalValue::Obj(obj) => {
       match obj.fields[0] {
         EvalValue::Float(v) =>
-          assert_true(v.is_close(4.0, relative_tolerance=1.0e-12, absolute_tolerance=1.0e-12))
+          assert_true(
+            v.is_close(
+              4.0,
+              relative_tolerance=1.0e-12,
+              absolute_tolerance=1.0e-12,
+            ),
+          )
         _ => fail("expected float field")
       }
       match obj.fields[1] {
         EvalValue::Float(v) =>
-          assert_true(v.is_close(2.0, relative_tolerance=1.0e-12, absolute_tolerance=1.0e-12))
+          assert_true(
+            v.is_close(
+              2.0,
+              relative_tolerance=1.0e-12,
+              absolute_tolerance=1.0e-12,
+            ),
+          )
         _ => fail("expected float field")
       }
     }
     _ => fail("expected object")
   }
 }
-

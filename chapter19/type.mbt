@@ -251,7 +251,13 @@ pub let type_rpc_bot : Type = RPC({ _any: true, _rpcs: [] })
 
 ///|
 /// Match refs/simple `TypeFunPtr.BOT`
-pub let type_funptr_bot : Type = FunPtr({ _nil: 3, _sig: Some([]), _ret: bottom, _fidxs: -1L, _name: None })
+pub let type_funptr_bot : Type = FunPtr({
+  _nil: 3,
+  _sig: Some([]),
+  _ret: bottom,
+  _fidxs: -1L,
+  _name: None,
+})
 
 ///|
 pub fn Type::gather() -> Array[Type] {

@@ -5,7 +5,9 @@ test "chapter13: jig" {
   assert_eq(stop.print(), "return 3.14;")
   match Evaluator::evaluate(stop, parameter=0L) {
     EvalValue::Float(v) =>
-      assert_true(v.is_close(3.14, relative_tolerance=1.0e-12, absolute_tolerance=1.0e-12))
+      assert_true(
+        v.is_close(3.14, relative_tolerance=1.0e-12, absolute_tolerance=1.0e-12),
+      )
     _ => fail("expected float")
   }
 }
@@ -72,9 +74,7 @@ test "chapter13: co-recur" {
 ///|
 test "chapter13: null ref 0" {
   let parser = Parser::new(
-    "struct N { N? next; int i; };\n" +
-    "N n = new N;\n" +
-    "return n.next;\n",
+    "struct N { N? next; int i; };\n" + "N n = new N;\n" + "return n.next;\n",
   )
   let stop = parser.parse(show=false).iterate(show=false)
   assert_eq(stop.print(), "return null;")
@@ -116,18 +116,12 @@ test "chapter13: null ref 3" {
 
 ///|
 test "chapter13: null ref 4" {
-  expect_parse_error(
-    "-null-5/null-5",
-    "Expected an identifier, found 'null'",
-  )
+  expect_parse_error("-null-5/null-5", "Expected an identifier, found 'null'")
 }
 
 ///|
 test "chapter13: null ref 5" {
-  expect_iterate_error(
-    "return null+42;",
-    "Cannot 'Add' null",
-  )
+  expect_iterate_error("return null+42;", "Cannot 'Add' null")
 }
 
 ///|

@@ -15,8 +15,10 @@ struct Parser {
 ///|
 let types : Ref[Map[String, Type]] = Ref::{ val: Map::new() }
 
+///|
 let next_alias : Ref[Int] = Ref::{ val: 2 }
 
+///|
 let inits : Ref[Map[String, Node]] = Ref::{ val: Map::new() }
 
 ///|
@@ -77,9 +79,7 @@ pub fn Parser::parse(
   self._scope.push()
   let mem = Node::new_mem()
   ignore(mem.add_def(None))
-  ignore(
-    mem.add_def(Some(Node::new_proj(start.val, 1, scope_mem0).peephole())),
-  )
+  ignore(mem.add_def(Some(Node::new_proj(start.val, 1, scope_mem0).peephole())))
   ignore(
     self._scope.define_(
       scope_ctrl,
@@ -88,9 +88,7 @@ pub fn Parser::parse(
       Node::new_cproj(start.val, 0, scope_ctrl).peephole(),
     ),
   )
-  ignore(
-    self._scope.define_(scope_mem0, type_mem_top, false, mem.peephole()),
-  )
+  ignore(self._scope.define_(scope_mem0, type_mem_top, false, mem.peephole()))
   ignore(
     self._scope.define_(
       scope_arg0,
@@ -163,11 +161,14 @@ fn Parser::parse_statement(self : Parser) -> Unit raise ParseError {
 }
 
 ///|
+
 ///|
 fn Parser::parse_struct(self : Parser) -> Unit raise ParseError {
   if self._scope._lex_size.length() > 2 {
     raise ParseError::Msg(
-      self.error_syntax("struct declarations can only appear in top level scope"),
+      self.error_syntax(
+        "struct declarations can only appear in top level scope",
+      ),
     )
   }
   let type_name = self.require_id()
@@ -197,11 +198,10 @@ fn Parser::parse_struct(self : Parser) -> Unit raise ParseError {
     self.parse_statement()
   }
 
-  let lexlen =
-    match self._scope._lex_size.last() {
-      Some(n) => n
-      None => panic()
-    }
+  let lexlen = match self._scope._lex_size.last() {
+    Some(n) => n
+    None => panic()
+  }
   let varlen = self._scope._vars.length()
   let s = Node::new_struct()
   let fields : Array[Field] = []
@@ -406,6 +406,7 @@ fn Parser::parse_type(self : Parser) -> Type? raise ParseError {
   }
 }
 
+///|
 fn Parser::type_ary(_self : Parser, t : Type) -> Type raise ParseError {
   match t {
     MemPtr(_, nil) if !nil =>
@@ -431,21 +432,20 @@ fn Parser::type_ary(_self : Parser, t : Type) -> Type raise ParseError {
 
 ///|
 fn Parser::parse_expression_statement(self : Parser) -> Node raise ParseError {
-  let n =
-    match self.parse_type() {
-      Some(t) => {
-        let mut last = self.parse_final(t)
-        while self._lexer.match_syntax(",") {
-          last = self.parse_final(t)
-        }
-        last
+  let n = match self.parse_type() {
+    Some(t) => {
+      let mut last = self.parse_final(t)
+      while self._lexer.match_syntax(",") {
+        last = self.parse_final(t)
       }
-      None =>
-        match self.parse_asgn(None, false) {
-          Some(asgn) => asgn
-          None => self.parse_expression()
-        }
+      last
     }
+    None =>
+      match self.parse_asgn(None, false) {
+        Some(asgn) => asgn
+        None => self.parse_expression()
+      }
+  }
   self.require(n, ";")
 }
 
@@ -459,44 +459,41 @@ fn Parser::parse_asgn(
   let old = self._lexer._position
   let name = self.require_id()
 
-  let mut expr =
-    if self._lexer.peek_char(';') || self._lexer.peek_char(',') {
-      match t {
-        None => raise ParseError::Msg(self.error_syntax("expression"))
-        Some(t) => {
-          let init =
-            if xfinal {
-              top
-            } else {
-              match t {
-                MemPtr(_, nil) if !nil => top
-                _ => t.make_init()
-              }
-            }
-          Node::new_constant(init).peephole()
-        }
-      }
-    } else if !self._lexer.match_syntax("=") {
-      self._lexer._position = old
-      return None
-    } else {
-      self.parse_expression()
-    }
-
-  let declared =
+  let mut expr = if self._lexer.peek_char(';') || self._lexer.peek_char(',') {
     match t {
-      Some(t) => t
-      None =>
-        match self._scope.lookup(name) {
-          None => raise ParseError::Msg("Undefined name '\{name}'")
-          Some(def) => {
-            if self._scope.input_exn(def._idx).ty() != top && def._final {
-              raise ParseError::Msg("Cannot reassign final '\{name}'")
-            }
-            def._type
+      None => raise ParseError::Msg(self.error_syntax("expression"))
+      Some(t) => {
+        let init = if xfinal {
+          top
+        } else {
+          match t {
+            MemPtr(_, nil) if !nil => top
+            _ => t.make_init()
           }
         }
+        Node::new_constant(init).peephole()
+      }
     }
+  } else if !self._lexer.match_syntax("=") {
+    self._lexer._position = old
+    return None
+  } else {
+    self.parse_expression()
+  }
+
+  let declared = match t {
+    Some(t) => t
+    None =>
+      match self._scope.lookup(name) {
+        None => raise ParseError::Msg("Undefined name '\{name}'")
+        Some(def) => {
+          if self._scope.input_exn(def._idx).ty() != top && def._final {
+            raise ParseError::Msg("Cannot reassign final '\{name}'")
+          }
+          def._type
+        }
+      }
+  }
 
   if _is_int_type(expr.ty()) && _is_float_type(declared) {
     expr = Node::new_to_float(expr).peephole()
@@ -569,10 +566,9 @@ fn Parser::parse_comparison(self : Parser) -> Node raise ParseError {
     if self._lexer.match_syntax("==") {
       lhs = Node::new_bool_eq(lhs, self.parse_shift()).widen().peephole()
     } else if self._lexer.match_syntax("!=") {
-      lhs =
-        Node::new_not(
-          Node::new_bool_eq(lhs, self.parse_shift()).widen().peephole(),
-        ).peephole()
+      lhs = Node::new_not(
+        Node::new_bool_eq(lhs, self.parse_shift()).widen().peephole(),
+      ).peephole()
     } else if self._lexer.match_syntax("<=") {
       lhs = Node::new_bool_le(lhs, self.parse_shift()).widen().peephole()
     } else if self._lexer.match_syntax("<") {
@@ -683,7 +679,10 @@ fn Parser::alloc(self : Parser) -> Node raise ParseError {
     let len = self.parse_expression().keep()
     match len.ty() {
       Int(_) => ()
-      _ => raise ParseError::Msg("Cannot allocate an array with length \{len.ty().str()}")
+      _ =>
+        raise ParseError::Msg(
+          "Cannot allocate an array with length \{len.ty().str()}",
+        )
     }
     self.require_syntax("]")
     let tmp = self.type_ary(t)
@@ -694,20 +693,18 @@ fn Parser::alloc(self : Parser) -> Node raise ParseError {
   } else {
     match t {
       MemPtr(obj, _) => {
-        let s =
-          match inits.val.get(obj._name) {
-            Some(s) => s
-            None => raise ParseError::Msg("Unknown struct type '\{obj._name}'")
-          }
-        let fs =
-          match s._struct_ts {
-            Some(ts) =>
-              match ts._fields {
-                Some(fs) => fs
-                None => panic()
-              }
-            None => panic()
-          }
+        let s = match inits.val.get(obj._name) {
+          Some(s) => s
+          None => raise ParseError::Msg("Unknown struct type '\{obj._name}'")
+        }
+        let fs = match s._struct_ts {
+          Some(ts) =>
+            match ts._fields {
+              Some(fs) => fs
+              None => panic()
+            }
+          None => panic()
+        }
         let has_constructor = self._lexer.match_syntax("{")
         let mut init = s._inputs
         let mut idx = 0
@@ -717,12 +714,7 @@ fn Parser::alloc(self : Parser) -> Node raise ParseError {
           for i = 0; i < fs.length(); i = i + 1 {
             let f = fs[i]
             ignore(
-              self._scope.define_(
-                f._fname,
-                f._type,
-                f._final,
-                s.input_exn(i),
-              ),
+              self._scope.define_(f._fname, f._type, f._final, s.input_exn(i)),
             )
           }
           self.parse_block()
@@ -740,10 +732,9 @@ fn Parser::alloc(self : Parser) -> Node raise ParseError {
             None => panic()
           }
         }
-        let size =
-          Node::new_constant(
-            TypeInteger::constant(Int64::from_int(obj.offset(fs.length()))),
-          ).peephole()
+        let size = Node::new_constant(
+          TypeInteger::constant(Int64::from_int(obj.offset(fs.length()))),
+        ).peephole()
         let ptr = self.new_struct(obj, size, idx, init)
         if has_constructor {
           self._scope.pop()
@@ -788,15 +779,22 @@ fn Parser::new_struct(
   }
   let inits : Array[Node] = []
   for i = 0; i < fields.length(); i = i + 1 {
-    inits.push(match init[i + idx] {
-      Some(n) => n
-      None => panic()
-    })
+    inits.push(
+      match init[i + idx] {
+        Some(n) => n
+        None => panic()
+      },
+    )
   }
-  let nnn =
-    Node::new_new(MemPtr(obj, false), self._scope.ctrl(), size, mems, inits)
-      .peephole()
-      .keep()
+  let nnn = Node::new_new(
+      MemPtr(obj, false),
+      self._scope.ctrl(),
+      size,
+      mems,
+      inits,
+    )
+    .peephole()
+    .keep()
   for i = 0; i < fields.length(); i = i + 1 {
     let alias_id = fields[i]._alias
     self.mem_alias_set(
@@ -807,13 +805,15 @@ fn Parser::new_struct(
   Node::new_proj(nnn.unkeep(), 1, obj._name).peephole()
 }
 
+///|
 fn Parser::new_array(self : Parser, ary : TypeStruct, len : Node) -> Node {
-  let base =
-    Node::new_constant(TypeInteger::constant(Int64::from_int(ary.ary_base()))).peephole()
-  let scale =
-    Node::new_constant(TypeInteger::constant(Int64::from_int(ary.ary_scale()))).peephole()
-  let size =
-    Node::new_add(base, Node::new_shl(len, scale).peephole()).peephole()
+  let base = Node::new_constant(
+    TypeInteger::constant(Int64::from_int(ary.ary_base())),
+  ).peephole()
+  let scale = Node::new_constant(
+    TypeInteger::constant(Int64::from_int(ary.ary_scale())),
+  ).peephole()
+  let size = Node::new_add(base, Node::new_shl(len, scale).peephole()).peephole()
   let fields = match ary._fields {
     Some(fields) => fields
     None => panic()
@@ -827,16 +827,15 @@ fn Parser::new_array(self : Parser, ary : TypeStruct, len : Node) -> Node {
 
 ///|
 fn Parser::parse_postfix(self : Parser, expr : Node) -> Node raise ParseError {
-  let name =
-    if self._lexer.match_syntax(".") {
-      self.require_id()
-    } else if self._lexer.match_syntax("#") {
-      "#"
-    } else if self._lexer.match_syntax("[") {
-      "[]"
-    } else {
-      return expr
-    }
+  let name = if self._lexer.match_syntax(".") {
+    self.require_id()
+  } else if self._lexer.match_syntax("#") {
+    "#"
+  } else if self._lexer.match_syntax("[") {
+    "[]"
+  } else {
+    return expr
+  }
 
   let ptr_obj = match expr.ty() {
     MemPtr(obj, _) => obj
@@ -851,14 +850,13 @@ fn Parser::parse_postfix(self : Parser, expr : Node) -> Node raise ParseError {
     }
   }
 
-  let base_obj =
-    match types.val.get(ptr_obj._name) {
-      Some(MemPtr(obj, _)) => obj
-      _ =>
-        raise ParseError::Msg(
-          "Accessing unknown field '\{name}' from '\{expr.ty().str()}'",
-        )
-    }
+  let base_obj = match types.val.get(ptr_obj._name) {
+    Some(MemPtr(obj, _)) => obj
+    _ =>
+      raise ParseError::Msg(
+        "Accessing unknown field '\{name}' from '\{expr.ty().str()}'",
+      )
+  }
   let idx = base_obj.find(name)
   if idx == -1 {
     raise ParseError::Msg(
@@ -874,42 +872,39 @@ fn Parser::parse_postfix(self : Parser, expr : Node) -> Node raise ParseError {
       )
   }
   let field = fields[idx]
-  let off =
-    if name == "[]" {
-      let idx = self.require(self.parse_expression(), "]")
-      let shl =
-        Node::new_shl(
-          idx,
-          Node::new_constant(
-            TypeInteger::constant(Int64::from_int(base_obj.ary_scale())),
-          ).peephole(),
-        ).peephole()
-      Node::new_add(
-        Node::new_constant(
-          TypeInteger::constant(Int64::from_int(base_obj.ary_base())),
-        ).peephole(),
-        shl,
-      ).peephole()
-    } else {
+  let off = if name == "[]" {
+    let idx = self.require(self.parse_expression(), "]")
+    let shl = Node::new_shl(
+      idx,
       Node::new_constant(
-        TypeInteger::constant(Int64::from_int(base_obj.offset(idx))),
-      ).peephole()
-    }
+        TypeInteger::constant(Int64::from_int(base_obj.ary_scale())),
+      ).peephole(),
+    ).peephole()
+    Node::new_add(
+      Node::new_constant(
+        TypeInteger::constant(Int64::from_int(base_obj.ary_base())),
+      ).peephole(),
+      shl,
+    ).peephole()
+  } else {
+    Node::new_constant(
+      TypeInteger::constant(Int64::from_int(base_obj.offset(idx))),
+    ).peephole()
+  }
 
   // Disambiguate "obj.fld==x" boolean test from "obj.fld=x" field assignment
   if self._lexer.match_opx('=', '=') {
     let val = self.zs_mask(self.parse_expression(), field._type)
-    let st =
-      Node::new_store(
-        name,
-        field._alias,
-        field._type,
-        self.mem_alias(field._alias),
-        expr.unkeep(),
-        off,
-        val,
-        init=false,
-      )
+    let st = Node::new_store(
+      name,
+      field._alias,
+      field._type,
+      self.mem_alias(field._alias),
+      expr.unkeep(),
+      off,
+      val,
+      init=false,
+    )
     if base_obj.is_ary() {
       ignore(st.set_def(0, Some(self._scope.ctrl())))
     }
@@ -917,15 +912,14 @@ fn Parser::parse_postfix(self : Parser, expr : Node) -> Node raise ParseError {
     return val
   }
 
-  let load =
-    Node::new_load(
-      name,
-      field._alias,
-      field._type.glb(),
-      self.mem_alias(field._alias),
-      expr.unkeep(),
-      off,
-    )
+  let load = Node::new_load(
+    name,
+    field._alias,
+    field._type.glb(),
+    self.mem_alias(field._alias),
+    expr.unkeep(),
+    off,
+  )
   self.parse_postfix(load.peephole())
 }
 
@@ -947,14 +941,10 @@ fn Parser::zs_mask(_self : Parser, val : Node, t : Type) -> Node {
         if shift <= 0 {
           val
         } else {
-          let shf =
-            Node::new_constant(
-              TypeInteger::constant(Int64::from_int(shift)),
-            ).peephole()
-          Node::new_sar(
-            Node::new_shl(val, shf.keep()).peephole(),
-            shf.unkeep(),
+          let shf = Node::new_constant(
+            TypeInteger::constant(Int64::from_int(shift)),
           ).peephole()
+          Node::new_sar(Node::new_shl(val, shf.keep()).peephole(), shf.unkeep()).peephole()
         }
       }
     (Flt(_), Flt(_)) =>
@@ -1231,10 +1221,11 @@ fn Lexer::match_opx(self : Lexer, c0 : Char, c1 : Char) -> Bool {
   if self._position + 1 >= self._input.length() {
     return false
   }
-  match (
-    self._input.get_char(self._position),
-    self._input.get_char(self._position + 1),
-  ) {
+  match
+    (
+      self._input.get_char(self._position),
+      self._input.get_char(self._position + 1),
+    ) {
     (Some(c), Some(next)) if c == c0 && next != c1 => {
       self._position += 1
       true

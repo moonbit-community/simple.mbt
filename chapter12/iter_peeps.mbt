@@ -3,30 +3,39 @@ priv struct JavaRandom {
   mut _seed : Int64
 }
 
+///|
 let _random_multiplier : Int64 = 0x5DEECE66DL
+
+///|
 let _random_addend : Int64 = 0xBL
+
+///|
 let _random_mask : Int64 = (1L << 48) - 1L
 
+///|
 fn JavaRandom::new(seed : Int64) -> JavaRandom {
   let r : JavaRandom = { _seed: 0L }
   r.set_seed(seed)
   r
 }
 
+///|
 fn JavaRandom::set_seed(self : JavaRandom, seed : Int64) -> Unit {
   self._seed = (seed ^ _random_multiplier) & _random_mask
 }
 
+///|
 fn JavaRandom::next(self : JavaRandom, bits : Int) -> Int {
   self._seed = (self._seed * _random_multiplier + _random_addend) & _random_mask
   (self._seed >> (48 - bits)).to_int()
 }
 
+///|
 fn JavaRandom::next_int(self : JavaRandom, bound : Int) -> Int {
   if bound <= 0 {
     panic()
   }
-  if (bound & (-bound)) == bound {
+  if (bound & -bound) == bound {
     let r = self.next(31)
     let mut k = 0
     let mut b = bound
@@ -131,7 +140,7 @@ let mid_assert_flag : Ref[Bool] = Ref::{ val: false }
 pub struct IterPeeps {}
 
 ///|
-let _iter_peeps : IterPeeps = IterPeeps::{}
+let _iter_peeps : IterPeeps = IterPeeps::{  }
 
 ///|
 pub fn IterPeeps::mid_assert() -> Bool {
@@ -168,7 +177,7 @@ pub fn IterPeeps::iterate(stop : Node, show? : Bool = false) -> Node {
     if !node.is_dead() {
       match node.peephole_opt() {
         None => ()
-        Some(x) => {
+        Some(x) =>
           if !x.is_dead() {
             if x._type is None {
               ignore(x.set_type(x.compute()))
@@ -190,7 +199,6 @@ pub fn IterPeeps::iterate(stop : Node, show? : Bool = false) -> Node {
             }
             node.move_deps_to_worklist()
           }
-        }
       }
     }
     n = work.pop()

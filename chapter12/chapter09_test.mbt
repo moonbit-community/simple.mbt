@@ -125,10 +125,7 @@ test "chapter09: while0" {
 ///|
 test "chapter09: while1" {
   let parser = Parser::new(
-    "if(0) while(0) {\n" +
-    "    int arg=arg;\n" +
-    "    while(0) {}\n" +
-    "}\n",
+    "if(0) while(0) {\n" + "    int arg=arg;\n" + "    while(0) {}\n" + "}\n",
   )
   let stop = parser.parse(show=false).iterate()
   assert_eq(stop.print(), "return 0;")
@@ -230,9 +227,7 @@ test "chapter09: fuzz5" {
 ///|
 test "chapter09: fuzz6" {
   let parser = Parser::new(
-    "int v0=0;\n" +
-    "while(0==1) while(v0)\n" +
-    "        v0=1+v0;\n",
+    "int v0=0;\n" + "while(0==1) while(v0)\n" + "        v0=1+v0;\n",
   )
   let stop = parser.parse(show=false).iterate()
   assert_eq(stop.print(), "return 0;")

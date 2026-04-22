@@ -123,10 +123,7 @@ fn _push_map(m : Map[Int, Array[Node]], key : Int, value : Node) -> Unit {
 }
 
 ///|
-fn Evaluator::ordered_group(
-  anchor : Node,
-  group : Array[Node],
-) -> Array[Node] {
+fn Evaluator::ordered_group(anchor : Node, group : Array[Node]) -> Array[Node] {
   if !local_scheduled.val {
     return Evaluator::topo_sort(group)
   }

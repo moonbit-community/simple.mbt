@@ -150,7 +150,9 @@ fn Parser::parse_field(self : Parser) -> Field raise ParseError {
 fn Parser::parse_struct(self : Parser) -> Unit raise ParseError {
   if self._scope._scopes.length() > 2 {
     raise ParseError::Msg(
-      self.error_syntax("struct declarations can only appear in top level scope"),
+      self.error_syntax(
+        "struct declarations can only appear in top level scope",
+      ),
     )
   }
   let type_name = self.require_id()
@@ -361,32 +363,30 @@ fn Parser::parse_expression_statement(self : Parser) -> Node raise ParseError {
   let old = self._lexer._position
   let t = self.parse_type()
   let name = self.require_id()
-  let mut expr =
-    if self._lexer.match_syntax(";") {
-      match t {
-        Some(t) => Node::new_constant(t.make_init()).peephole()
-        None => raise ParseError::Msg(self.error_syntax("expression"))
-      }
-    } else if self._lexer.match_syntax("=") {
-      self.require(self.parse_expression(), ";")
-    } else {
-      self._lexer._position = old
-      return self.require(self.parse_expression(), ";")
-    }
-
-  let declared =
+  let mut expr = if self._lexer.match_syntax(";") {
     match t {
-      Some(t) => t
-      None =>
-        match self._scope.lookup(name) {
-          None => raise ParseError::Msg("Undefined name '\{name}'")
-          Some(_) =>
-            match self._scope.lookup_declared_type(name) {
-              Some(t) => t
-              None => panic()
-            }
-        }
+      Some(t) => Node::new_constant(t.make_init()).peephole()
+      None => raise ParseError::Msg(self.error_syntax("expression"))
     }
+  } else if self._lexer.match_syntax("=") {
+    self.require(self.parse_expression(), ";")
+  } else {
+    self._lexer._position = old
+    return self.require(self.parse_expression(), ";")
+  }
+
+  let declared = match t {
+    Some(t) => t
+    None =>
+      match self._scope.lookup(name) {
+        None => raise ParseError::Msg("Undefined name '\{name}'")
+        Some(_) =>
+          match self._scope.lookup_declared_type(name) {
+            Some(t) => t
+            None => panic()
+          }
+      }
+  }
 
   if _is_int_type(expr.ty()) && _is_float_type(declared) {
     expr = Node::new_to_float(expr).peephole()
@@ -425,13 +425,12 @@ fn Parser::parse_expression_statement(self : Parser) -> Node raise ParseError {
 ///|
 fn Parser::parse_decl(self : Parser, t : Type) -> Node raise ParseError {
   let name = self.require_id()
-  let mut expr =
-    if self._lexer.match_syntax(";") {
-      Node::new_constant(t.make_init()).peephole()
-    } else {
-      self.require_syntax("=")
-      self.require(self.parse_expression(), ";")
-    }
+  let mut expr = if self._lexer.match_syntax(";") {
+    Node::new_constant(t.make_init()).peephole()
+  } else {
+    self.require_syntax("=")
+    self.require(self.parse_expression(), ";")
+  }
   if _is_int_type(expr.ty()) && _is_float_type(t) {
     expr = Node::new_to_float(expr).peephole()
   }
@@ -458,10 +457,9 @@ fn Parser::parse_comparison(self : Parser) -> Node raise ParseError {
     if self._lexer.match_syntax("==") {
       lhs = Node::new_bool_eq(lhs, self.parse_addition()).widen().peephole()
     } else if self._lexer.match_syntax("!=") {
-      lhs =
-        Node::new_not(
-          Node::new_bool_eq(lhs, self.parse_addition()).widen().peephole(),
-        ).peephole()
+      lhs = Node::new_not(
+        Node::new_bool_eq(lhs, self.parse_addition()).widen().peephole(),
+      ).peephole()
     } else if self._lexer.match_syntax("<=") {
       lhs = Node::new_bool_le(lhs, self.parse_addition()).widen().peephole()
     } else if self._lexer.match_syntax("<") {
@@ -575,7 +573,9 @@ fn Parser::mem_alias_set(self : Parser, alias_id : Int, st : Node) -> Unit {
 
 ///|
 fn Parser::new_struct(self : Parser, obj : TypeStruct) -> Node {
-  let n = Node::new_new(MemPtr(obj, false), self._scope.ctrl()).peephole().keep()
+  let n = Node::new_new(MemPtr(obj, false), self._scope.ctrl())
+    .peephole()
+    .keep()
   let ctrl = self._scope.ctrl()
   let mut alias_id = match start.val._alias_starts.get(obj._name) {
     Some(aid) => aid

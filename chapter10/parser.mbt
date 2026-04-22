@@ -116,7 +116,10 @@ fn Parser::parse_statement(self : Parser) -> Unit raise ParseError {
 }
 
 ///|
-fn Parser::parse_field(self : Parser, _sname : String) -> Field raise ParseError {
+fn Parser::parse_field(
+  self : Parser,
+  _sname : String,
+) -> Field raise ParseError {
   if self._lexer.matchx_syntax("int") {
     let fname = self.require_id()
     self.require_syntax(";")
@@ -134,7 +137,9 @@ fn Parser::parse_field(self : Parser, _sname : String) -> Field raise ParseError
 fn Parser::parse_struct(self : Parser) -> Unit raise ParseError {
   if self._scope._scopes.length() > 2 {
     raise ParseError::Msg(
-      self.error_syntax("struct declarations can only appear in top level scope"),
+      self.error_syntax(
+        "struct declarations can only appear in top level scope",
+      ),
     )
   }
   let type_name = self.require_id()
@@ -326,18 +331,17 @@ fn Parser::parse_expression_statement(self : Parser) -> Node raise ParseError {
   let old = self._lexer._position
   let mut t = self.parse_type()
   let name = self.require_id()
-  let expr =
-    if self._lexer.match_syntax(";") {
-      match t {
-        Some(t) => Node::new_constant(t.make_init()).peephole()
-        None => raise ParseError::Msg(self.error_syntax("expression"))
-      }
-    } else if self._lexer.match_syntax("=") {
-      self.require(self.parse_expression(), ";")
-    } else {
-      self._lexer._position = old
-      return self.require(self.parse_expression(), ";")
+  let expr = if self._lexer.match_syntax(";") {
+    match t {
+      Some(t) => Node::new_constant(t.make_init()).peephole()
+      None => raise ParseError::Msg(self.error_syntax("expression"))
     }
+  } else if self._lexer.match_syntax("=") {
+    self.require(self.parse_expression(), ";")
+  } else {
+    self._lexer._position = old
+    return self.require(self.parse_expression(), ";")
+  }
 
   match t {
     Some(t_) =>
@@ -368,13 +372,12 @@ fn Parser::parse_expression_statement(self : Parser) -> Node raise ParseError {
 ///|
 fn Parser::parse_decl(self : Parser, t : Type) -> Node raise ParseError {
   let name = self.require_id()
-  let expr =
-    if self._lexer.match_syntax(";") {
-      Node::new_constant(t.make_init()).peephole()
-    } else {
-      self.require_syntax("=")
-      self.require(self.parse_expression(), ";")
-    }
+  let expr = if self._lexer.match_syntax(";") {
+    Node::new_constant(t.make_init()).peephole()
+  } else {
+    self.require_syntax("=")
+    self.require(self.parse_expression(), ";")
+  }
   if !expr.ty().isa(t) {
     raise ParseError::Msg(
       "Type \{expr.ty().str()} is not of declared type \{t.str()}",
@@ -398,10 +401,9 @@ fn Parser::parse_comparison(self : Parser) -> Node raise ParseError {
     if self._lexer.match_syntax("==") {
       lhs = Node::new_bool_eq(lhs, self.parse_addition()).peephole()
     } else if self._lexer.match_syntax("!=") {
-      lhs =
-        Node::new_not(
-          Node::new_bool_eq(lhs, self.parse_addition()).peephole(),
-        ).peephole()
+      lhs = Node::new_not(
+        Node::new_bool_eq(lhs, self.parse_addition()).peephole(),
+      ).peephole()
     } else if self._lexer.match_syntax("<=") {
       lhs = Node::new_bool_le(lhs, self.parse_addition()).peephole()
     } else if self._lexer.match_syntax("<") {
@@ -514,7 +516,9 @@ fn Parser::mem_alias_set(self : Parser, alias_id : Int, st : Node) -> Unit {
 
 ///|
 fn Parser::new_struct(self : Parser, obj : TypeStruct) -> Node {
-  let n = Node::new_new(MemPtr(obj, false), self._scope.ctrl()).peephole().keep()
+  let n = Node::new_new(MemPtr(obj, false), self._scope.ctrl())
+    .peephole()
+    .keep()
   let init_value = Node::new_constant(TypeInteger::constant(0L)).peephole()
   let mut alias_id = match start.val._alias_starts.get(obj._name) {
     Some(aid) => aid
@@ -569,13 +573,7 @@ fn Parser::parse_postfix(self : Parser, expr : Node) -> Node raise ParseError {
       let val = self.parse_expression()
       self.mem_alias_set(
         alias_id,
-        Node::new_store(
-          name,
-          alias_id,
-          self.mem_alias(alias_id),
-          expr,
-          val,
-        ).peephole(),
+        Node::new_store(name, alias_id, self.mem_alias(alias_id), expr, val).peephole(),
       )
       return expr
     }

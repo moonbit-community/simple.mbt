@@ -69,12 +69,16 @@ let long_max_value : Int64 = 9223372036854775807L
 let long_min_value : Int64 = -9223372036854775807L - 1L
 
 ///|
-pub let type_integer_top : Type =
-  Int({ _min: long_max_value, _max: long_min_value })
+pub let type_integer_top : Type = Int({
+  _min: long_max_value,
+  _max: long_min_value,
+})
 
 ///|
-pub let type_integer_bot : Type =
-  Int({ _min: long_min_value, _max: long_max_value })
+pub let type_integer_bot : Type = Int({
+  _min: long_min_value,
+  _max: long_max_value,
+})
 
 ///|
 pub let type_integer_zero : Type = TypeInteger::constant(0L)
@@ -98,8 +102,10 @@ pub let type_integer_i8 : Type = TypeInteger::make(-128L, 127L)
 pub let type_integer_i16 : Type = TypeInteger::make(-32768L, 32767L)
 
 ///|
-pub let type_integer_i32 : Type =
-  TypeInteger::make(-(1L << 31), (1L << 31) - 1L)
+pub let type_integer_i32 : Type = TypeInteger::make(
+  -(1L << 31),
+  (1L << 31) - 1L,
+)
 
 ///|
 pub let type_integer_u8 : Type = TypeInteger::make(0L, 255L)
@@ -138,10 +144,14 @@ pub let type_struct_top : TypeStruct = { _name: "$TOP", _fields: Some([]) }
 pub let type_struct_bot : TypeStruct = { _name: "$BOT", _fields: Some([]) }
 
 ///|
-pub let type_field_test : Field = Field::make("test", type_integer_zero, -2, false)
+pub let type_field_test : Field = Field::make(
+  "test", type_integer_zero, -2, false,
+)
 
 ///|
-pub let type_struct_test : TypeStruct = TypeStruct::make("test", [type_field_test])
+pub let type_struct_test : TypeStruct = TypeStruct::make("test", [
+  type_field_test,
+])
 
 ///|
 pub let type_struct_s1_forward : TypeStruct = TypeStruct::make_forward("S1")
@@ -150,24 +160,16 @@ pub let type_struct_s1_forward : TypeStruct = TypeStruct::make_forward("S1")
 pub let type_struct_s2_forward : TypeStruct = TypeStruct::make_forward("S2")
 
 ///|
-pub let type_struct_s1 : TypeStruct =
-  TypeStruct::make(
-    "S1",
-    [
-      Field::make("a", type_integer_bot, -1, false),
-      Field::make("s2", MemPtr(type_struct_s2_forward, false), -2, false),
-    ],
-  )
+pub let type_struct_s1 : TypeStruct = TypeStruct::make("S1", [
+  Field::make("a", type_integer_bot, -1, false),
+  Field::make("s2", MemPtr(type_struct_s2_forward, false), -2, false),
+])
 
 ///|
-pub let type_struct_s2 : TypeStruct =
-  TypeStruct::make(
-    "S2",
-    [
-      Field::make("b", type_float_bot, -3, false),
-      Field::make("s1", MemPtr(type_struct_s1_forward, false), -4, false),
-    ],
-  )
+pub let type_struct_s2 : TypeStruct = TypeStruct::make("S2", [
+  Field::make("b", type_float_bot, -3, false),
+  Field::make("s1", MemPtr(type_struct_s1_forward, false), -4, false),
+])
 
 ///|
 pub let type_mem_ptr_bot : Type = MemPtr(type_struct_bot, true)
@@ -278,12 +280,7 @@ pub fn Type::dual(self : Type) -> Type {
     Ctrl => XCtrl
     XCtrl => Ctrl
     Int(i) => Int({ _min: i._max, _max: i._min })
-    Flt(f) =>
-      if f._sz == 0 {
-        self
-      } else {
-        Flt({ _sz: -f._sz, _con: 0.0 })
-      }
+    Flt(f) => if f._sz == 0 { self } else { Flt({ _sz: -f._sz, _con: 0.0 }) }
     Mem(mem) =>
       if mem._alias == 0 {
         type_mem_bot
@@ -372,8 +369,16 @@ pub fn Type::meet(self : Type, other : Type) -> Type {
     (Ctrl, XCtrl) | (XCtrl, Ctrl) => Ctrl
     (Int(i0), Int(i1)) =>
       Int({
-        _min: if i0._min < i1._min { i0._min } else { i1._min },
-        _max: if i0._max > i1._max { i0._max } else { i1._max },
+        _min: if i0._min < i1._min {
+          i0._min
+        } else {
+          i1._min
+        },
+        _max: if i0._max > i1._max {
+          i0._max
+        } else {
+          i1._max
+        },
       })
     (Flt(f0), Flt(f1)) => TypeFloat::xmeet(f0, f1)
     (Tuple(ts0), Tuple(ts1)) =>
@@ -412,10 +417,7 @@ pub fn Type::hash_code(self : Type) -> Int {
     Flt(f) => mix(0x18 ^ f._con.hash() ^ f._sz)
     Mem(mem) => mix(0x30 ^ mem._alias ^ mem._t.hash_code())
     MemPtr(obj, nil) =>
-      mix(
-        (0x40 ^ obj.hash_code()) ^
-        (if nil { 0x1000 } else { 0 }),
-      )
+      mix(0x40 ^ obj.hash_code() ^ (if nil { 0x1000 } else { 0 }))
     Tuple(types) => {
       let mut sum = 0x20
       for t in types {
@@ -476,7 +478,11 @@ pub fn Type::str(self : Type) -> String {
       } else {
         match self {
           MemPtr(obj, nil) =>
-            if nil { "*\{obj.str()}?" } else { "*\{obj.str()}" }
+            if nil {
+              "*\{obj.str()}?"
+            } else {
+              "*\{obj.str()}"
+            }
           _ => "?"
         }
       }
@@ -614,15 +620,15 @@ pub fn TypeInteger::log_size(self : TypeInteger) -> Int {
     return 0
   }
   if (self._min == -128L && self._max == 127L) ||
-     (self._min == 0L && self._max == 255L) {
+    (self._min == 0L && self._max == 255L) {
     return 0
   }
   if (self._min == -32768L && self._max == 32767L) ||
-     (self._min == 0L && self._max == 65535L) {
+    (self._min == 0L && self._max == 65535L) {
     return 1
   }
   if (self._min == -(1L << 31) && self._max == (1L << 31) - 1L) ||
-     (self._min == 0L && self._max == (1L << 32) - 1L) {
+    (self._min == 0L && self._max == (1L << 32) - 1L) {
     return 2
   }
   if self._min == long_min_value && self._max == long_max_value {
@@ -672,7 +678,11 @@ pub fn TypeFloat::is_constant(self : TypeFloat) -> Bool {
 
 ///|
 pub fn TypeFloat::log_size(self : TypeFloat) -> Int {
-  if self._sz == 32 { 2 } else { 3 }
+  if self._sz == 32 {
+    2
+  } else {
+    3
+  }
 }
 
 ///|
@@ -695,7 +705,11 @@ pub fn TypeFloat::xmeet(self : TypeFloat, other : TypeFloat) -> Type {
     return Flt(i1)
   }
   if i1._sz == 32 {
-    return if i0._sz == 0 && !i0.is_f32() { type_float_bot } else { type_float_b32 }
+    return if i0._sz == 0 && !i0.is_f32() {
+      type_float_bot
+    } else {
+      type_float_b32
+    }
   }
   if i1._sz != 0 {
     return Flt(i1)
@@ -742,7 +756,11 @@ pub fn TypeFloat::str(self : TypeFloat) -> String {
     return "flt"
   }
   let base = TypeFloat::to_java_string(self._con)
-  if self.is_f32() { base + "f" } else { base }
+  if self.is_f32() {
+    base + "f"
+  } else {
+    base
+  }
 }
 
 ///|
@@ -756,7 +774,12 @@ pub fn TypeFloat::to_java_string(v : Double) -> String {
 }
 
 ///|
-pub fn Field::make(fname : String, typ : Type, alias_ : Int, xfinal : Bool) -> Field {
+pub fn Field::make(
+  fname : String,
+  typ : Type,
+  alias_ : Int,
+  xfinal : Bool,
+) -> Field {
   { _fname: fname, _type: typ, _alias: alias_, _final: xfinal }
 }
 
@@ -781,13 +804,10 @@ pub fn TypeStruct::make_ary(
     MemPtr(_, nil) if !nil => panic()
     _ => ()
   }
-  TypeStruct::make(
-    "[" + body.str() + "]",
-    [
-      Field::make("#", len, len_alias, true),
-      Field::make("[]", body, body_alias, true),
-    ],
-  )
+  TypeStruct::make("[" + body.str() + "]", [
+    Field::make("#", len, len_alias, true),
+    Field::make("[]", body, body_alias, true),
+  ])
 }
 
 ///|
@@ -845,11 +865,18 @@ pub fn TypeStruct::meet(self : TypeStruct, other : TypeStruct) -> TypeStruct {
         let fields : Array[Field] = []
         for i, f0 in f0s {
           let f1 = f1s[i]
-          if f0._fname != f1._fname || f0._alias != f1._alias || f0._final != f1._final {
+          if f0._fname != f1._fname ||
+            f0._alias != f1._alias ||
+            f0._final != f1._final {
             return type_struct_bot
           }
           fields.push(
-            Field::make(f0._fname, f0._type.meet(f1._type), f0._alias, f0._final),
+            Field::make(
+              f0._fname,
+              f0._type.meet(f1._type),
+              f0._alias,
+              f0._final,
+            ),
           )
         }
         return TypeStruct::make(self._name, fields)
@@ -907,14 +934,13 @@ pub fn TypeStruct::hash_code(self : TypeStruct) -> Int {
     None => ()
     Some(fs) =>
       for f in fs {
-        sum =
-          mix(
-            sum ^
-            f._fname.hash() ^
-            f._alias ^
-            f._type.hash_code() ^
-            (if f._final { 1024 } else { 0 }),
-          )
+        sum = mix(
+          sum ^
+          f._fname.hash() ^
+          f._alias ^
+          f._type.hash_code() ^
+          (if f._final { 1024 } else { 0 }),
+        )
       }
   }
   sum
@@ -961,6 +987,7 @@ pub fn TypeStruct::offset(self : TypeStruct, idx : Int) -> Int {
   offs[idx]
 }
 
+///|
 fn TypeStruct::offsets(self : TypeStruct) -> Array[Int] {
   let fields = match self._fields {
     Some(fields) => fields
