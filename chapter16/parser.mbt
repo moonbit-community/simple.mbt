@@ -406,7 +406,7 @@ fn Parser::parse_type(self : Parser) -> Type? raise ParseError {
   }
 }
 
-fn Parser::type_ary(self : Parser, t : Type) -> Type raise ParseError {
+fn Parser::type_ary(_self : Parser, t : Type) -> Type raise ParseError {
   match t {
     MemPtr(_, nil) if !nil =>
       raise ParseError::Msg("Arrays of reference types must always be nullable")

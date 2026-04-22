@@ -118,7 +118,7 @@ fn WorkList::pop(self : WorkList) -> Node? {
 }
 
 ///|
-fn WorkList::on(self : WorkList, x : Node) -> Bool {
+fn WorkList::_on(self : WorkList, x : Node) -> Bool {
   self._ensure_on_size(x._nid + 1)
   self._on[x._nid]
 }

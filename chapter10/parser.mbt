@@ -116,7 +116,7 @@ fn Parser::parse_statement(self : Parser) -> Unit raise ParseError {
 }
 
 ///|
-fn Parser::parse_field(self : Parser, sname : String) -> Field raise ParseError {
+fn Parser::parse_field(self : Parser, _sname : String) -> Field raise ParseError {
   if self._lexer.matchx_syntax("int") {
     let fname = self.require_id()
     self.require_syntax(";")

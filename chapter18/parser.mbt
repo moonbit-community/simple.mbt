@@ -594,7 +594,7 @@ fn Parser::parse_type(self : Parser) -> Type? raise ParseError {
 }
 
 ///|
-fn Parser::type_ary(self : Parser, t : Type) -> Type raise ParseError {
+fn Parser::type_ary(_self : Parser, t : Type) -> Type raise ParseError {
   match t {
     MemPtr(_, nil) if nil == 1 || nil == 2 =>
       raise ParseError::Msg("Arrays of reference types must always be nullable")
@@ -680,7 +680,7 @@ fn Parser::lift_expr(
 
   // Update declared forward-ref type to actual, if possible.
   match t {
-    MemPtr(obj, nil) =>
+    MemPtr(obj, _nil) =>
       match obj._fields {
         None =>
           match types.val.get(obj._name) {
@@ -1254,7 +1254,7 @@ fn Parser::parse_postfix(self : Parser, expr : Node) -> Node raise ParseError {
   let mut tf = field._type
   // Update declared forward ref to the actual
   match tf {
-    MemPtr(obj, nil) =>
+    MemPtr(obj, _nil) =>
       match obj._fields {
         None =>
           match types.val.get(obj._name) {

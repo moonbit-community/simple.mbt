@@ -130,7 +130,7 @@ fn Parser::parse_statement(self : Parser) -> Unit raise ParseError {
 }
 
 ///|
-fn Parser::parse_field(self : Parser, sname : String) -> Field raise ParseError {
+fn Parser::parse_field(self : Parser, _sname : String) -> Field raise ParseError {
   match self.parse_type() {
     Some(t) => {
       let fname = self.require_id()
