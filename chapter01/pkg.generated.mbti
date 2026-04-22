@@ -1,15 +1,18 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "hackwaly/simple.mbt/chapter01"
 
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/ref",
+}
+
 // Values
-pub let start : Ref[Node]
+pub let start : @ref.Ref[Node]
 
 // Errors
 pub(all) suberror ParseError {
   Msg(String)
-}
-pub impl Eq for ParseError
-pub impl Show for ParseError
+} derive(Eq, @debug.Debug)
 
 // Types and methods
 pub struct Node {
@@ -38,9 +41,7 @@ pub enum NodeKind {
   Start
   Return
   Constant
-}
-pub impl Eq for NodeKind
-pub impl Show for NodeKind
+} derive(Eq, @debug.Debug)
 
 type Parser
 pub fn Parser::new(String) -> Self

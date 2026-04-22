@@ -1,20 +1,35 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "hackwaly/simple.mbt/chapter19"
 
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/ref",
+}
+
 // Values
 pub let bottom : Type
 
 pub let control : Type
 
-pub let disable_peephole : Ref[Bool]
+pub let disable_peephole : @ref.Ref[Bool]
+
+pub fn fun_table_reset() -> Unit
 
 pub fn inst_select_x86_64_v2(Node) -> Unit
 
-pub let iter_cnt : Ref[Int]
+pub let iter_cnt : @ref.Ref[Int]
 
-pub let iter_nop_cnt : Ref[Int]
+pub let iter_nop_cnt : @ref.Ref[Int]
 
-pub let scheduled : Ref[Bool]
+pub fn link_get(TypeFunPtr) -> Node?
+
+pub fn link_put(Node) -> Unit
+
+pub let main_sig : @ref.Ref[TypeFunPtr]
+
+pub fn make_fun(Array[Type], Type) -> TypeFunPtr
+
+pub let scheduled : @ref.Ref[Bool]
 
 pub let scope_arg0 : String
 
@@ -22,7 +37,9 @@ pub let scope_ctrl : String
 
 pub let scope_mem0 : String
 
-pub let start : Ref[Node]
+pub let start : @ref.Ref[Node]
+
+pub let stop : @ref.Ref[Node]
 
 pub let top : Type
 
@@ -37,6 +54,8 @@ pub let type_float_t32 : Type
 pub let type_float_top : Type
 
 pub let type_float_zero : Type
+
+pub let type_funptr_bot : Type
 
 pub let type_integer_bool : Type
 
@@ -86,6 +105,8 @@ pub let type_ptr_xnptr : Type
 
 pub let type_ptr_xptr : Type
 
+pub let type_rpc_bot : Type
+
 pub let type_struct_bot : TypeStruct
 
 pub let type_struct_s1 : TypeStruct
@@ -108,28 +129,26 @@ pub let type_tuple_if_neither : Type
 
 pub let type_tuple_if_true : Type
 
+pub let type_tuple_ret : Type
+
 pub let type_xnil : Type
 
 pub let xcontrol : Type
 
-pub let xctrl : Ref[Node]
+pub let xctrl : @ref.Ref[Node]
 
-pub let zero : Ref[Node]
+pub let zero : @ref.Ref[Node]
 
 // Errors
 pub(all) suberror ParseError {
   Msg(String)
-}
-pub impl Eq for ParseError
-pub impl Show for ParseError
+} derive(Eq, @debug.Debug)
 
 // Types and methods
 pub enum CallingConv {
   Win64
   SystemV
-}
-pub impl Eq for CallingConv
-pub impl Show for CallingConv
+} derive(Eq, @debug.Debug)
 
 pub struct CodeGen {
   mut _phase : Phase?
@@ -156,24 +175,19 @@ pub fn Eval2::eval(CodeGen, Int64, loops? : Int) -> String
 pub struct EvalResult {
   typ : EvalResultType
   value : Int64
-}
-pub impl Eq for EvalResult
-pub impl Show for EvalResult
+} derive(Eq, @debug.Debug)
 
 pub enum EvalResultType {
   Value
   Fallthrough
   Timeout
-}
-pub impl Eq for EvalResultType
-pub impl Show for EvalResultType
+} derive(Eq, @debug.Debug)
 
 pub enum EvalStatus {
   Value(EvalValue)
   Fallthrough
   Timeout
-}
-pub impl Show for EvalStatus
+} derive(@debug.Debug)
 
 pub enum EvalValue {
   Int(Int64)
@@ -182,8 +196,7 @@ pub enum EvalValue {
   Null
   Mem(Int)
   Tuple(Array[EvalValue])
-}
-pub impl Show for EvalValue
+} derive(@debug.Debug)
 
 type Evaluator
 pub fn Evaluator::evaluate(Node, parameter? : Int64, loops? : Int) -> EvalValue
@@ -194,12 +207,11 @@ pub struct Field {
   _type : Type
   _alias : Int
   _final : Bool
-}
+} derive(Eq, @debug.Debug)
 pub fn Field::is_final(Self) -> Bool
 pub fn Field::make(String, Type, Int, Bool) -> Self
 pub fn Field::make_from(Self, Type) -> Self
 pub fn Field::make_ro(Self) -> Self
-pub impl Eq for Field
 
 pub struct GlobalCodeMotion {
 }
@@ -240,12 +252,25 @@ pub struct Node {
   mut _vars : Array[Var]
   mut _lex_size : Array[Int]
   mut _in_cons : Array[Bool]
+  mut _in_funs : Array[Bool]
   mut _guards : Array[Node]
   mut _proj_idx : Int
   mut _proj_label : String
   mut _start_args : Array[Type]
   mut _alias_starts : Map[String, Int]
   mut _phi_label : String
+  mut _parm_idx : Int
+  mut _folding : Bool
+  mut _fun_sig : TypeFunPtr?
+  mut _fun_name : String?
+  mut _fun_ret : Node?
+  mut _ret_fun : Node?
+  mut _ret_mt : Type
+  mut _ret_ti : Bool
+  mut _ret_tf : Bool
+  mut _ret_tp : Bool
+  mut _ret_tn : Bool
+  mut _fref_var : Var?
   mut _declared_type : Type
   mut _memop_name : String
   mut _memop_alias : Int
@@ -256,6 +281,7 @@ pub struct Node {
 pub fn Node::add_def(Self, Self?) -> Self?
 pub fn Node::add_guards(Self, Self, Self?, Bool) -> Unit
 pub fn Node::add_return(Self, Self) -> Self
+pub fn Node::balance_if(Self, Self) -> Unit raise ParseError
 pub fn Node::block_head(Self) -> Bool
 pub fn Node::cfg0(Self) -> Self
 pub fn Node::compute(Self) -> Type
@@ -283,6 +309,7 @@ pub fn Node::lookup_declared_type(Self, String) -> Type?
 pub fn Node::mem(Self) -> Self
 pub fn Node::mem_alias(Self, Int) -> Self
 pub fn Node::mem_alias_set(Self, Int, Self) -> Unit
+pub fn Node::merge(Self) -> Self
 pub fn Node::merge_scopes(Self, Self) -> Self
 pub fn Node::move_deps_to_worklist(Self) -> Unit
 pub fn Node::n_ins(Self) -> Int
@@ -296,11 +323,15 @@ pub fn Node::new_bool_le(Self, Self) -> Self
 pub fn Node::new_bool_lef(Self, Self) -> Self
 pub fn Node::new_bool_lt(Self, Self) -> Self
 pub fn Node::new_bool_ltf(Self, Self) -> Self
+pub fn Node::new_call(Self, Self, Array[Self], Self) -> Self
+pub fn Node::new_call_end(Self) -> Self
 pub fn Node::new_cast(Type, Self?, Self) -> Self
 pub fn Node::new_constant(Type) -> Self
 pub fn Node::new_cproj(Self, Int, String) -> Self
 pub fn Node::new_div(Self, Self) -> Self
 pub fn Node::new_divf(Self, Self) -> Self
+pub fn Node::new_fref(Var) -> Self
+pub fn Node::new_fun(TypeFunPtr, Self) -> Self
 pub fn Node::new_if(Self?, Self) -> Self
 pub fn Node::new_load(String, Int, Type, Self, Self, Self) -> Self
 pub fn Node::new_loop(Self?) -> Self
@@ -313,12 +344,15 @@ pub fn Node::new_never(Self) -> Self
 pub fn Node::new_new(Type, Self, Self, Array[Self], Array[Self]) -> Self
 pub fn Node::new_not(Self) -> Self
 pub fn Node::new_or(Self, Self) -> Self
+pub fn Node::new_parm(String, Int, Type, Self, Self) -> Self
 pub fn Node::new_phi(String, Type, Array[Self?]) -> Self
 pub fn Node::new_proj(Self, Int, String) -> Self
 pub fn Node::new_read_only(Self) -> Self
 pub fn Node::new_region(Self?, Self?) -> Self
-pub fn Node::new_return(Self?, Self, Self) -> Self
-pub fn Node::new_return0(Self?, Self) -> Self
+pub fn Node::new_region_in_progress() -> Self
+pub fn Node::new_return(Self, Self, Self, Self, Self) -> Self
+pub fn Node::new_return0(Self, Self) -> Self
+pub fn Node::new_return_scope(Self, Self, Self) -> Self
 pub fn Node::new_round_f32(Self) -> Self
 pub fn Node::new_sar(Self, Self) -> Self
 pub fn Node::new_scope() -> Self
@@ -333,12 +367,13 @@ pub fn Node::new_subf(Self, Self) -> Self
 pub fn Node::new_to_float(Self) -> Self
 pub fn Node::new_xctrl() -> Self
 pub fn Node::new_xor(Self, Self) -> Self
+pub fn Node::out_of_function(Self, Var) -> Bool
 pub fn Node::peephole(Self) -> Self
 pub fn Node::peephole_opt(Self) -> Self?
 pub fn Node::pop(Self) -> Unit
 pub fn Node::pop_n(Self, Int) -> Unit
 pub fn Node::print(Self) -> String
-pub fn Node::push(Self, in_con? : Bool) -> Unit
+pub fn Node::push(Self, in_con? : Bool, in_fun? : Bool) -> Unit
 pub fn Node::remove_guards(Self, Self) -> Unit
 pub fn Node::reset() -> Unit
 pub fn Node::reverse_names(Self) -> Array[String]
@@ -358,6 +393,11 @@ pub enum NodeKind {
   Start
   Stop
   Return
+  Fun
+  Call
+  CallEnd
+  Parm
+  FRef
   Constant
   XCtrl
   Mem
@@ -401,16 +441,13 @@ pub enum NodeKind {
   Phi
   Scope
   Mach
-}
-pub impl Eq for NodeKind
-pub impl Show for NodeKind
+} derive(Eq, @debug.Debug)
 
 pub struct Obj {
   id : Int
   struct_ : TypeStruct
   fields : Array[EvalValue]
-}
-pub impl Show for Obj
+} derive(@debug.Debug)
 
 type Parser
 pub fn Parser::mem_name(Int) -> String
@@ -427,9 +464,7 @@ pub enum Phase {
   Schedule
   LocalSched
   RegAlloc
-}
-pub impl Eq for Phase
-pub impl Show for Phase
+} derive(Eq, @debug.Debug)
 
 pub enum Type {
   Bot
@@ -446,7 +481,7 @@ pub enum Type {
   FunPtr(TypeFunPtr)
   RPC(TypeRPC)
   Tuple(Array[Type]?)
-}
+} derive(Eq, @debug.Debug)
 pub fn Type::dual(Self) -> Self
 pub fn Type::gather() -> Array[Self]
 pub fn Type::glb(Self) -> Self
@@ -468,13 +503,12 @@ pub fn Type::non_zero(Self) -> Self
 pub fn Type::print_to(Self, StringBuilder) -> Unit
 pub fn Type::str(Self) -> String
 pub fn Type::value_exn(Self) -> Int64
-pub impl Eq for Type
 pub impl Show for Type
 
 pub struct TypeFloat {
   _sz : Int
   _con : Double
-}
+} derive(Eq, @debug.Debug)
 pub fn TypeFloat::constant(Double) -> Type
 pub fn TypeFloat::is_constant(Self) -> Bool
 pub fn TypeFloat::is_f32(Self) -> Bool
@@ -486,7 +520,6 @@ pub fn TypeFloat::str(Self) -> String
 pub fn TypeFloat::to_java_string(Double) -> String
 pub fn TypeFloat::value_exn(Self) -> Double
 pub fn TypeFloat::xmeet(Self, Self) -> Type
-pub impl Eq for TypeFloat
 
 pub struct TypeFunPtr {
   _nil : Int
@@ -494,14 +527,22 @@ pub struct TypeFunPtr {
   _ret : Type
   _fidxs : Int64
   _name : String?
-}
+} derive(@debug.Debug)
+pub fn TypeFunPtr::arg(Self, Int) -> Type
 pub fn TypeFunPtr::dual(Self) -> Self
+pub fn TypeFunPtr::fidxs(Self) -> Int64
 pub fn TypeFunPtr::glb(Self) -> Self
 pub fn TypeFunPtr::hash_code(Self) -> Int
 pub fn TypeFunPtr::is_constant(Self) -> Bool
 pub fn TypeFunPtr::is_high(Self) -> Bool
+pub fn TypeFunPtr::make_from_fidx(Self, Int) -> Self
 pub fn TypeFunPtr::make_from_nil(Self, Int) -> Self
+pub fn TypeFunPtr::make_from_ret(Self, Type) -> Self
 pub fn TypeFunPtr::meet0(Self) -> Self
+pub fn TypeFunPtr::nargs(Self) -> Int
+pub fn TypeFunPtr::next_fidx(Int64) -> Int64
+pub fn TypeFunPtr::not_null(Self) -> Bool
+pub fn TypeFunPtr::ret(Self) -> Type
 pub fn TypeFunPtr::set_name(Self, String?) -> Self
 pub fn TypeFunPtr::str(Self) -> String
 pub fn TypeFunPtr::xmeet(Self, Self) -> Self
@@ -510,7 +551,7 @@ pub impl Eq for TypeFunPtr
 pub struct TypeInteger {
   _min : Int64
   _max : Int64
-}
+} derive(Eq, @debug.Debug)
 pub fn TypeInteger::constant(Int64) -> Type
 pub fn TypeInteger::is_constant(Self) -> Bool
 pub fn TypeInteger::is_high(Self) -> Bool
@@ -522,29 +563,26 @@ pub fn TypeInteger::mask(Self) -> Int64
 pub fn TypeInteger::non_zero(Self) -> Type
 pub fn TypeInteger::str(Self) -> String
 pub fn TypeInteger::value_exn(Self) -> Int64
-pub impl Eq for TypeInteger
 
 pub struct TypeMem {
   _alias : Int
   _t : Type
-}
-pub impl Eq for TypeMem
+} derive(Eq, @debug.Debug)
 
 pub struct TypeRPC {
   _any : Bool
   _rpcs : Array[Int]
-}
+} derive(Eq, @debug.Debug)
 pub fn TypeRPC::dual(Self) -> Self
 pub fn TypeRPC::hash_code(Self) -> Int
 pub fn TypeRPC::is_constant(Self) -> Bool
 pub fn TypeRPC::str(Self) -> String
 pub fn TypeRPC::xmeet(Self, Self) -> Self
-pub impl Eq for TypeRPC
 
 pub struct TypeStruct {
   _name : String
   _fields : Array[Field]?
-}
+} derive(Eq, @debug.Debug)
 pub fn TypeStruct::ary_base(Self) -> Int
 pub fn TypeStruct::ary_scale(Self) -> Int
 pub fn TypeStruct::dual(Self) -> Self
@@ -562,7 +600,6 @@ pub fn TypeStruct::make_ro(Self) -> Self
 pub fn TypeStruct::meet(Self, Self) -> Self
 pub fn TypeStruct::offset(Self, Int) -> Int
 pub fn TypeStruct::str(Self) -> String
-pub impl Eq for TypeStruct
 pub impl Show for TypeStruct
 
 pub struct Var {
@@ -570,8 +607,8 @@ pub struct Var {
   _name : String
   _type : Type
   _final : Bool
-}
-pub impl Eq for Var
+  _fref : Bool
+} derive(Eq, @debug.Debug)
 
 // Type aliases
 
