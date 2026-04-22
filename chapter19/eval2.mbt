@@ -2,7 +2,7 @@
 pub struct Eval2 {}
 
 ///|
-enum Eval2Value {
+priv enum Eval2Value {
   Int(Int64)
   Float(Double)
   Obj(Ref[Eval2Obj])
@@ -13,13 +13,13 @@ enum Eval2Value {
 }
 
 ///|
-struct Eval2Obj {
+priv struct Eval2Obj {
   id : Int
   fields : Array[Eval2Value?]
 }
 
 ///|
-struct Frame {
+priv struct Frame {
   mut data : Map[Int, Eval2Value?]
   mut prior : Ref[Frame]?
   mut refcnt : Int
@@ -27,7 +27,7 @@ struct Frame {
 }
 
 ///|
-struct Closure {
+priv struct Closure {
   _cc : Node
   mut _frame : Ref[Frame]
 }
