@@ -10,6 +10,9 @@ pub enum Phase {
 } derive(Eq, Debug)
 
 ///|
+let _reg_alloc_phase : Phase = RegAlloc
+
+///|
 pub enum CallingConv {
   Win64
   SystemV
