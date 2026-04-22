@@ -14,7 +14,7 @@ pub enum NodeKind {
   BoolLt
   BoolLe
   Scope
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub struct Node {

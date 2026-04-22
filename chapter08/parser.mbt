@@ -1,7 +1,7 @@
 ///|
 pub(all) suberror ParseError {
   Msg(String)
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 struct Parser {

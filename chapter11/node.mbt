@@ -26,7 +26,7 @@ pub enum NodeKind {
   Loop
   Phi
   Scope
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub struct Node {

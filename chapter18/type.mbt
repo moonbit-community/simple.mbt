@@ -14,13 +14,13 @@ pub enum Type {
   FunPtr(TypeFunPtr)
   RPC(TypeRPC)
   Tuple(Array[Type]?)
-} derive(Eq)
+} derive(Eq, Debug)
 
 ///|
 pub struct TypeInteger {
   _min : Int64
   _max : Int64
-} derive(Eq)
+} derive(Eq, Debug)
 
 ///|
 pub struct TypeFloat {
@@ -28,13 +28,13 @@ pub struct TypeFloat {
   _sz : Int
   /// The constant value or 0.0
   _con : Double
-} derive(Eq)
+} derive(Eq, Debug)
 
 ///|
 pub struct TypeMem {
   _alias : Int
   _t : Type
-} derive(Eq)
+} derive(Eq, Debug)
 
 ///|
 pub struct Field {
@@ -42,13 +42,13 @@ pub struct Field {
   _type : Type
   _alias : Int
   _final : Bool
-} derive(Eq)
+} derive(Eq, Debug)
 
 ///|
 pub struct TypeStruct {
   _name : String
   _fields : Array[Field]?
-} derive(Eq)
+} derive(Eq, Debug)
 
 ///|
 pub impl Show for TypeStruct with output(self, logger) {
@@ -62,7 +62,7 @@ pub struct TypeFunPtr {
   _ret : Type
   _fidxs : Int64
   _name : String?
-}
+} derive(Debug)
 
 ///|
 pub impl Eq for TypeFunPtr with equal(self, other) {
@@ -76,7 +76,7 @@ pub impl Eq for TypeFunPtr with equal(self, other) {
 pub struct TypeRPC {
   _any : Bool
   _rpcs : Array[Int]
-} derive(Eq)
+} derive(Eq, Debug)
 
 
 ///|

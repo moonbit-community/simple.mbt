@@ -3,7 +3,7 @@ pub enum Type {
   Bot
   Top
   Int(Int64)
-} derive(Eq)
+} derive(Eq, Debug)
 
 ///|
 pub struct TypeInteger {}

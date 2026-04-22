@@ -3,7 +3,7 @@ pub enum NodeKind {
   Start
   Return
   Constant
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub struct Node {

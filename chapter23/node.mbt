@@ -46,7 +46,7 @@ pub enum NodeKind {
   Phi
   Scope
   Mach
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub struct Var {
@@ -54,7 +54,7 @@ pub struct Var {
   _name : String
   _type : Type
   _final : Bool
-} derive(Eq)
+} derive(Eq, Debug)
 
 ///|
 pub struct Node {

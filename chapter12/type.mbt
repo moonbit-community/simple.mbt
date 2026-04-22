@@ -13,7 +13,7 @@ pub enum Type {
   Mem(Int)
   MemPtr(TypeStruct, Bool)
   Tuple(Array[Type])
-} derive(Eq)
+} derive(Eq, Debug)
 
 ///|
 pub struct TypeInteger {}
@@ -25,13 +25,13 @@ pub struct TypeFloat {}
 pub struct Field {
   _fname : String
   _type : Type
-} derive(Eq)
+} derive(Eq, Debug)
 
 ///|
 pub struct TypeStruct {
   _name : String
   _fields : Array[Field]
-} derive(Eq)
+} derive(Eq, Debug)
 
 ///|
 pub impl Show for TypeStruct with output(self, logger) {

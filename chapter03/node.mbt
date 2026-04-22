@@ -9,7 +9,7 @@ pub enum NodeKind {
   Div
   Minus
   Scope
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub struct Node {

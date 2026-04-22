@@ -8,7 +8,7 @@ pub enum NodeKind {
   Mul
   Div
   Minus
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub struct Node {

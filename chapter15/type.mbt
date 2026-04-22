@@ -9,13 +9,13 @@ pub enum Type {
   Mem(TypeMem)
   MemPtr(TypeStruct, Bool)
   Tuple(Array[Type])
-} derive(Eq)
+} derive(Eq, Debug)
 
 ///|
 pub struct TypeInteger {
   _min : Int64
   _max : Int64
-} derive(Eq)
+} derive(Eq, Debug)
 
 ///|
 pub struct TypeFloat {
@@ -23,26 +23,26 @@ pub struct TypeFloat {
   _sz : Int
   /// The constant value or 0.0
   _con : Double
-} derive(Eq)
+} derive(Eq, Debug)
 
 ///|
 pub struct TypeMem {
   _alias : Int
   _t : Type
-} derive(Eq)
+} derive(Eq, Debug)
 
 ///|
 pub struct Field {
   _fname : String
   _alias : Int
   _type : Type
-} derive(Eq)
+} derive(Eq, Debug)
 
 ///|
 pub struct TypeStruct {
   _name : String
   _fields : Array[Field]?
-} derive(Eq)
+} derive(Eq, Debug)
 
 ///|
 pub impl Show for TypeStruct with output(self, logger) {

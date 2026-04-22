@@ -3,13 +3,13 @@ pub enum EvalResultType {
   Value
   Fallthrough
   Timeout
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub struct EvalResult {
   typ : EvalResultType
   value : Int64
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub struct GraphEvaluator {
