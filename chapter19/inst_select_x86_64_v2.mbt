@@ -86,8 +86,10 @@ fn _select_lea(n : Node, base : Node, idx0 : Node, off : Int64) -> Bool {
   let mut idx = idx1
   // Prefer printing `arg` as the base for symmetric (scale==1) LEAs.
   if scale == 1L &&
-    ((idx.kind == Proj && base0.kind != Proj) ||
-      (idx.kind == Parm && base0.kind != Parm)) {
+    (
+      (idx.kind == Proj && base0.kind != Proj) ||
+      (idx.kind == Parm && base0.kind != Parm)
+    ) {
     let tmp = base0
     base0 = idx
     idx = tmp
@@ -141,7 +143,8 @@ fn _select_add(n : Node) -> Unit {
 
   // (base + (idx<<scale))
   if _const_int(rhs0) is None {
-    if lhs0.kind == Mach && lhs0._mach_op == "shli" &&
+    if lhs0.kind == Mach &&
+      lhs0._mach_op == "shli" &&
       !(rhs0.kind == Mach && rhs0._mach_op == "shli") {
       if _select_lea(n, rhs0, lhs0, 0L) {
         return

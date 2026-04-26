@@ -1,24 +1,29 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "hackwaly/simple.mbt/chapter11"
 
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/ref",
+}
+
 // Values
 pub let bottom : Type
 
 pub let control : Type
 
-pub let disable_peephole : Ref[Bool]
+pub let disable_peephole : @ref.Ref[Bool]
 
-pub let iter_cnt : Ref[Int]
+pub let iter_cnt : @ref.Ref[Int]
 
-pub let iter_nop_cnt : Ref[Int]
+pub let iter_nop_cnt : @ref.Ref[Int]
 
-pub let scheduled : Ref[Bool]
+pub let scheduled : @ref.Ref[Bool]
 
 pub let scope_arg0 : String
 
 pub let scope_ctrl : String
 
-pub let start : Ref[Node]
+pub let start : @ref.Ref[Node]
 
 pub let top : Type
 
@@ -62,39 +67,32 @@ pub let type_tuple_if_true : Type
 
 pub let xcontrol : Type
 
-pub let xctrl : Ref[Node]
+pub let xctrl : @ref.Ref[Node]
 
-pub let zero : Ref[Node]
+pub let zero : @ref.Ref[Node]
 
 // Errors
 pub(all) suberror ParseError {
   Msg(String)
-}
-pub impl Eq for ParseError
-pub impl Show for ParseError
+} derive(Eq, @debug.Debug)
 
 // Types and methods
 pub struct EvalResult {
   typ : EvalResultType
   value : Int64
-}
-pub impl Eq for EvalResult
-pub impl Show for EvalResult
+} derive(Eq, @debug.Debug)
 
 pub enum EvalResultType {
   Value
   Fallthrough
   Timeout
-}
-pub impl Eq for EvalResultType
-pub impl Show for EvalResultType
+} derive(Eq, @debug.Debug)
 
 pub enum EvalStatus {
   Value(EvalValue)
   Fallthrough
   Timeout
-}
-pub impl Show for EvalStatus
+} derive(@debug.Debug)
 
 pub enum EvalValue {
   Int(Int64)
@@ -102,8 +100,7 @@ pub enum EvalValue {
   Null
   Mem(Int)
   Tuple(Array[EvalValue])
-}
-pub impl Show for EvalValue
+} derive(@debug.Debug)
 
 type Evaluator
 pub fn Evaluator::evaluate(Node, parameter? : Int64, loops? : Int) -> EvalValue
@@ -112,9 +109,8 @@ pub fn Evaluator::evaluate_with_result(Node, parameter? : Int64, loops? : Int) -
 pub struct Field {
   _fname : String
   _type : Type
-}
+} derive(Eq, @debug.Debug)
 pub fn Field::make(String, Type) -> Self
-pub impl Eq for Field
 
 pub struct GlobalCodeMotion {
 }
@@ -262,16 +258,13 @@ pub enum NodeKind {
   Loop
   Phi
   Scope
-}
-pub impl Eq for NodeKind
-pub impl Show for NodeKind
+} derive(Eq, @debug.Debug)
 
 pub struct Obj {
   id : Int
   struct_ : TypeStruct
   fields : Array[EvalValue]
-}
-pub impl Show for Obj
+} derive(@debug.Debug)
 
 type Parser
 pub fn Parser::mem_name(Int) -> String
@@ -291,7 +284,7 @@ pub enum Type {
   Mem(Int)
   MemPtr(TypeStruct, Bool)
   Tuple(Array[Type])
-}
+} derive(Eq, @debug.Debug)
 pub fn Type::dual(Self) -> Self
 pub fn Type::gather() -> Array[Self]
 pub fn Type::glb(Self) -> Self
@@ -307,7 +300,6 @@ pub fn Type::mem_ptr(TypeStruct, nil? : Bool) -> Self
 pub fn Type::print_to(Self, StringBuilder) -> Unit
 pub fn Type::str(Self) -> String
 pub fn Type::value_exn(Self) -> Int64
-pub impl Eq for Type
 pub impl Show for Type
 
 pub struct TypeInteger {
@@ -317,7 +309,7 @@ pub fn TypeInteger::constant(Int64) -> Type
 pub struct TypeStruct {
   _name : String
   _fields : Array[Field]
-}
+} derive(Eq, @debug.Debug)
 pub fn TypeStruct::dual(Self) -> Self
 pub fn TypeStruct::find(Self, String) -> Int
 pub fn TypeStruct::glb(Self) -> Self
@@ -325,7 +317,6 @@ pub fn TypeStruct::hash_code(Self) -> Int
 pub fn TypeStruct::make(String, Array[Field]) -> Self
 pub fn TypeStruct::meet(Self, Self) -> Self
 pub fn TypeStruct::str(Self) -> String
-pub impl Eq for TypeStruct
 pub impl Show for TypeStruct
 
 // Type aliases

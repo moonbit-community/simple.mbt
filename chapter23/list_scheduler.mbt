@@ -2,6 +2,9 @@
 pub struct ListScheduler {}
 
 ///|
+let _list_scheduler : ListScheduler = ListScheduler::{  }
+
+///|
 priv struct XSched {
   _n : Node
   mut _bcnt : Int
@@ -82,11 +85,7 @@ fn ListScheduler::xsched_get(
   match n {
     None => None
     Some(node) => {
-      let target = if node.kind == Proj {
-        node.input_exn(0)
-      } else {
-        node
-      }
+      let target = if node.kind == Proj { node.input_exn(0) } else { node }
       if target._nid >= 0 && target._nid < xs.length() {
         xs[target._nid]
       } else {
@@ -115,7 +114,7 @@ fn ListScheduler::xsched_alloc(
   if n.kind != Phi {
     for def in n._inputs {
       match def {
-        Some(d) if d != bb => {
+        Some(d) if d != bb =>
           match d.input(0) {
             Some(_) =>
               if d.cfg0() == bb {
@@ -125,7 +124,6 @@ fn ListScheduler::xsched_alloc(
               }
             None => ()
           }
-        }
         _ => ()
       }
     }
@@ -178,14 +176,13 @@ fn ListScheduler::is_ready(xs : Array[Ref[XSched]?], n : Node) -> Bool {
 fn ListScheduler::dec_is_ready(xs : Array[Ref[XSched]?], n : Node) -> Bool {
   match ListScheduler::xsched_get(xs, Some(n)) {
     None => false
-    Some(x) => {
+    Some(x) =>
       if x.val._rcnt <= 0 {
         false
       } else {
         x.val._rcnt = x.val._rcnt - 1
         ListScheduler::is_ready(xs, n)
       }
-    }
   }
 }
 
@@ -309,15 +306,13 @@ fn ListScheduler::schedule_block(bb : Node, trace : Bool) -> Unit {
         Some(use_node) if use_node.kind == Proj =>
           for useuse in use_node._outputs {
             match useuse {
-              Some(useuse) => {
+              Some(useuse) =>
                 ready = ListScheduler::ready(bb, useuse, ready, outputs, xs)
-              }
               None => ()
             }
           }
-        Some(use_node) => {
+        Some(use_node) =>
           ready = ListScheduler::ready(bb, use_node, ready, outputs, xs)
-        }
         None => ()
       }
     }

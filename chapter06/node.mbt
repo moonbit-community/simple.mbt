@@ -18,7 +18,7 @@ pub enum NodeKind {
   Region
   Phi
   Scope
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub struct Node {

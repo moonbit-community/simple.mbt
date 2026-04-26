@@ -10,7 +10,7 @@ pub enum Type {
   Mem(Int)
   MemPtr(TypeStruct, Bool)
   Tuple(Array[Type])
-} derive(Eq)
+} derive(Eq, Debug)
 
 ///|
 pub struct TypeInteger {}
@@ -19,13 +19,13 @@ pub struct TypeInteger {}
 pub struct Field {
   _fname : String
   _type : Type
-} derive(Eq)
+} derive(Eq, Debug)
 
 ///|
 pub struct TypeStruct {
   _name : String
   _fields : Array[Field]
-} derive(Eq)
+} derive(Eq, Debug)
 
 ///|
 pub impl Show for TypeStruct with output(self, logger) {
@@ -72,7 +72,9 @@ pub let type_struct_bot : TypeStruct = { _name: "$BOT", _fields: [] }
 pub let type_field_test : Field = Field::make("test", type_integer_zero)
 
 ///|
-pub let type_struct_test : TypeStruct = TypeStruct::make("test", [type_field_test])
+pub let type_struct_test : TypeStruct = TypeStruct::make("test", [
+  type_field_test,
+])
 
 ///|
 pub let type_mem_ptr_bot : Type = MemPtr(type_struct_bot, true)
@@ -270,10 +272,7 @@ pub fn Type::hash_code(self : Type) -> Int {
     Int(v) => mix(0x10 ^ v.to_int())
     Mem(mem_alias) => mix(0x30 ^ mem_alias)
     MemPtr(obj, nil) =>
-      mix(
-        (0x40 ^ obj.hash_code()) ^
-        (if nil { 0x1000 } else { 0 }),
-      )
+      mix(0x40 ^ obj.hash_code() ^ (if nil { 0x1000 } else { 0 }))
     Tuple(types) => {
       let mut sum = 0x20
       for t in types {
@@ -333,7 +332,11 @@ pub fn Type::str(self : Type) -> String {
       } else {
         match self {
           MemPtr(obj, nil) =>
-            if nil { "*\{obj.str()}?" } else { "*\{obj.str()}" }
+            if nil {
+              "*\{obj.str()}?"
+            } else {
+              "*\{obj.str()}"
+            }
           _ => "?"
         }
       }

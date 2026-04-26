@@ -8,7 +8,7 @@ pub enum Type {
   IntBot
   Int(Int64)
   Tuple(Array[Type])
-} derive(Eq)
+} derive(Eq, Debug)
 
 ///|
 pub struct TypeInteger {}

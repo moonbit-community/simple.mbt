@@ -7,13 +7,16 @@ pub enum Phase {
   Schedule
   LocalSched
   RegAlloc
-} derive(Eq, Show)
+} derive(Eq, Debug)
+
+///|
+let _reg_alloc_phase : Phase = RegAlloc
 
 ///|
 pub enum CallingConv {
   Win64
   SystemV
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub struct CodeGen {

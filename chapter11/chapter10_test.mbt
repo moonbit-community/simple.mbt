@@ -1,6 +1,8 @@
 ///|
 fn expect_iterate_error(source : String, expected : String) -> Unit raise {
-  let result : Result[Node, ParseError] = try? Parser::new(source).parse().iterate()
+  let result : Result[Node, ParseError] = try? Parser::new(source)
+    .parse()
+    .iterate()
   match result {
     Err(ParseError::Msg(msg)) => assert_eq(msg, expected)
     Ok(_) => fail("expected ParseError")
@@ -82,8 +84,7 @@ test "chapter10: bug unknown field from null" {
 ///|
 test "chapter10: bug expected identifier" {
   expect_parse_error(
-    "struct s0 { int v0; }\n" +
-    "arg=0+new s0.0;\n",
+    "struct s0 { int v0; }\n" + "arg=0+new s0.0;\n",
     "Expected an identifier, found 'null'",
   )
 }
@@ -213,7 +214,10 @@ test "chapter10: iter" {
     "return sum;\n",
   )
   let stop = parser.parse(show=false).iterate()
-  assert_eq(stop.print(), "return Phi(Loop17,0,(Phi(Loop,0,(Phi_x+1))+Phi_sum));")
+  assert_eq(
+    stop.print(),
+    "return Phi(Loop17,0,(Phi(Loop,0,(Phi_x+1))+Phi_sum));",
+  )
 }
 
 ///|
@@ -230,7 +234,10 @@ test "chapter10: test1" {
     "return ret;\n",
   )
   let stop = parser.parse(show=false).iterate()
-  assert_eq(stop.print(), "return Phi(Loop13,new s0,Phi(Region34,new s0,Phi_ret));")
+  assert_eq(
+    stop.print(),
+    "return Phi(Loop13,new s0,Phi(Region34,new s0,Phi_ret));",
+  )
 }
 
 ///|
@@ -247,7 +254,10 @@ test "chapter10: test2" {
     "return ret;\n",
   )
   let stop = parser.parse(show=false).iterate()
-  assert_eq(stop.print(), "return Phi(Loop16,new s0,Phi(Region35,new s0,Phi_ret));")
+  assert_eq(
+    stop.print(),
+    "return Phi(Loop16,new s0,Phi(Region35,new s0,Phi_ret));",
+  )
 }
 
 ///|
@@ -263,7 +273,10 @@ test "chapter10: test3" {
     "return ret;\n",
   )
   let stop = parser.parse(show=false).iterate()
-  assert_eq(stop.print(), "return Phi(Loop13,new s0,Phi(Region33,new s0,Phi_ret));")
+  assert_eq(
+    stop.print(),
+    "return Phi(Loop13,new s0,Phi(Region33,new s0,Phi_ret));",
+  )
 }
 
 ///|
@@ -373,9 +386,7 @@ test "chapter10: bug8" {
 ///|
 test "chapter10: bug9" {
   let parser = Parser::new(
-    "int v0=arg==0;\n" +
-    "while(v0) continue;\n" +
-    "return 0;\n",
+    "int v0=arg==0;\n" + "while(v0) continue;\n" + "return 0;\n",
   )
   let stop = parser.parse(show=false).iterate()
   assert_eq(stop.print(), "return 0;")

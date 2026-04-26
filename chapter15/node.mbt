@@ -42,7 +42,7 @@ pub enum NodeKind {
   Loop
   Phi
   Scope
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub struct Node {
@@ -89,7 +89,9 @@ pub let start : Ref[Node] = Ref::{
 pub let zero : Ref[Node] = Ref::{ val: Node::new_constant(type_integer_zero) }
 
 ///|
-pub let xctrl : Ref[Node] = Ref::{ val: Node::new_raw(XCtrl, [Some(start.val)]) }
+pub let xctrl : Ref[Node] = Ref::{
+  val: Node::new_raw(XCtrl, [Some(start.val)]),
+}
 
 ///|
 pub let disable_peephole : Ref[Bool] = Ref::{ val: false }
@@ -293,7 +295,12 @@ pub fn Node::new_load(
   mem_ptr : Node,
   mem_off : Node,
 ) -> Node {
-  let node = Node::new_raw(Load, [None, Some(mem_slice), Some(mem_ptr), Some(mem_off)])
+  let node = Node::new_raw(Load, [
+    None,
+    Some(mem_slice),
+    Some(mem_ptr),
+    Some(mem_off),
+  ])
   node._memop_name = name
   node._memop_alias = mem_alias
   node._declared_type = declared_type
@@ -311,10 +318,13 @@ pub fn Node::new_store(
   value : Node,
   init? : Bool = false,
 ) -> Node {
-  let node = Node::new_raw(
-    Store,
-    [None, Some(mem_slice), Some(mem_ptr), Some(mem_off), Some(value)],
-  )
+  let node = Node::new_raw(Store, [
+    None,
+    Some(mem_slice),
+    Some(mem_ptr),
+    Some(mem_off),
+    Some(value),
+  ])
   node._memop_name = name
   node._memop_alias = mem_alias
   node._declared_type = declared_type
@@ -491,7 +501,11 @@ pub fn Node::new_loop(entry : Node?) -> Node {
 }
 
 ///|
-pub fn Node::new_phi(label : String, declared_type : Type, inputs : Array[Node?]) -> Node {
+pub fn Node::new_phi(
+  label : String,
+  declared_type : Type,
+  inputs : Array[Node?],
+) -> Node {
   let node = Node::new_raw(Phi, inputs)
   node._phi_label = label
   node._declared_type = declared_type
@@ -1051,12 +1065,11 @@ pub fn Node::widen(self : Node) -> Node {
     Some(flt) => {
       for i = 1; i < self.n_ins(); i = i + 1 {
         let inp = self.input_exn(i)
-        let widened =
-          if _is_float_type(inp.ty()) {
-            inp
-          } else {
-            Node::new_to_float(inp).peephole()
-          }
+        let widened = if _is_float_type(inp.ty()) {
+          inp
+        } else {
+          Node::new_to_float(inp).peephole()
+        }
         ignore(flt.set_def(i, Some(widened)))
       }
       self.kill()
@@ -1180,7 +1193,7 @@ fn Node::idepth(self : Node) -> Int {
       } else {
         let mut d = 0
         match self.kind {
-          Stop | Region => {
+          Stop | Region =>
             for input in self._inputs {
               match input {
                 Some(cfg) => {
@@ -1192,7 +1205,6 @@ fn Node::idepth(self : Node) -> Int {
                 None => ()
               }
             }
-          }
           Loop =>
             match self.input(1) {
               Some(entry) => d = entry.idepth() + 1
@@ -1352,7 +1364,8 @@ fn Node::force_exit(self : Node, stop : Node) -> Unit {
   let other_cproj = fn(iff : Node, idx : Int) -> Node? {
     for use_ in iff._outputs {
       match use_ {
-        Some(proj) if proj.kind == CProj && proj._proj_idx == idx => return Some(proj)
+        Some(proj) if proj.kind == CProj && proj._proj_idx == idx =>
+          return Some(proj)
         _ => ()
       }
     }
@@ -1433,17 +1446,16 @@ pub fn Node::compute(self : Node) -> Type {
               ts[1] = MemPtr(obj, nil)
               for i = 0; i < fs.length(); i = i + 1 {
                 let f = fs[i]
-                ts[i + 2] =
-                  Type::mem(f._alias, t=f._type.make_init()).meet(
-                    self.input_exn(i + 2).ty(),
-                  )
+                ts[i + 2] = Type::mem(f._alias, t=f._type.make_init()).meet(
+                  self.input_exn(i + 2).ty(),
+                )
               }
               Tuple(ts)
             }
           }
         _ => bottom
       }
-    Load => {
+    Load =>
       match self.input_exn(1).ty() {
         Mem(mem) =>
           if self._declared_type != mem._t && self.err() is None {
@@ -1453,18 +1465,16 @@ pub fn Node::compute(self : Node) -> Type {
           }
         _ => self._declared_type
       }
-    }
     Store => {
       let val_ty = self.input_exn(4).ty()
       match self.input_exn(1).ty() {
         Mem(mem) => {
-          let t =
-            if mem._alias == self._memop_alias {
-              val_ty.meet(mem._t)
-            } else {
-              bottom
-            }
-          Type::mem(self._memop_alias, t=t)
+          let t = if mem._alias == self._memop_alias {
+            val_ty.meet(mem._t)
+          } else {
+            bottom
+          }
+          Type::mem(self._memop_alias, t~)
         }
         _ => type_mem_bot
       }
@@ -1513,7 +1523,11 @@ pub fn Node::compute(self : Node) -> Type {
       match pred_ty {
         Int(i) =>
           if i.is_constant() {
-            return if i.value_exn() == 0L { type_tuple_if_false } else { type_tuple_if_true }
+            return if i.value_exn() == 0L {
+              type_tuple_if_false
+            } else {
+              type_tuple_if_true
+            }
           }
         _ => ()
       }
@@ -1536,11 +1550,15 @@ pub fn Node::compute(self : Node) -> Type {
       }
       self.input_exn(1).ty()
     }
-    Phi => {
+    Phi =>
       match self.input(0) {
         Some(region) =>
           if region.kind != Region && region.kind != Loop {
-            if region.ty() == xcontrol { top } else { self.ty() }
+            if region.ty() == xcontrol {
+              top
+            } else {
+              self.ty()
+            }
           } else if region.in_progress() {
             self._declared_type
           } else {
@@ -1554,7 +1572,6 @@ pub fn Node::compute(self : Node) -> Type {
           }
         None => bottom
       }
-    }
     Add => {
       let t1 = self.input_exn(1).ty()
       let t2 = self.input_exn(2).ty()
@@ -1565,7 +1582,8 @@ pub fn Node::compute(self : Node) -> Type {
         (Int(i1), Int(i2)) =>
           if i1.is_constant() && i2.is_constant() {
             TypeInteger::constant(i1.value_exn() + i2.value_exn())
-          } else if !_add_overflow(i1._min, i2._min) && !_add_overflow(i1._max, i2._max) {
+          } else if !_add_overflow(i1._min, i2._min) &&
+            !_add_overflow(i1._max, i2._max) {
             TypeInteger::make(i1._min + i2._min, i1._max + i2._max)
           } else {
             type_integer_bot
@@ -1657,7 +1675,11 @@ pub fn Node::compute(self : Node) -> Type {
         (Int(i1), Int(i2)) =>
           if i1.is_constant() && i2.is_constant() {
             let rhs = i2.value_exn()
-            if rhs == 0L { type_integer_zero } else { TypeInteger::constant(i1.value_exn() / rhs) }
+            if rhs == 0L {
+              type_integer_zero
+            } else {
+              TypeInteger::constant(i1.value_exn() / rhs)
+            }
           } else {
             type_integer_bot
           }
@@ -1694,7 +1716,12 @@ pub fn Node::compute(self : Node) -> Type {
     MinusF => {
       let t1 = self.input_exn(1).ty()
       match t1 {
-        Flt(f0) => if f0.is_constant() { TypeFloat::constant(-f0.value_exn()) } else { t1 }
+        Flt(f0) =>
+          if f0.is_constant() {
+            TypeFloat::constant(-f0.value_exn())
+          } else {
+            t1
+          }
         _ => type_float_bot
       }
     }
@@ -1725,7 +1752,12 @@ pub fn Node::compute(self : Node) -> Type {
             TypeInteger::constant(1L)
           } else {
             match t1 {
-              MemPtr(_, nil) => if !nil { TypeInteger::constant(0L) } else { type_integer_bot }
+              MemPtr(_, nil) =>
+                if !nil {
+                  TypeInteger::constant(0L)
+                } else {
+                  type_integer_bot
+                }
               _ => type_integer_bot
             }
           }
@@ -1759,7 +1791,9 @@ pub fn Node::compute(self : Node) -> Type {
       match (t1, t2) {
         (Int(i1), Int(i2)) =>
           if i1.is_constant() && i2.is_constant() {
-            TypeInteger::constant(_unsigned_shift_right(i1.value_exn(), i2.value_exn()))
+            TypeInteger::constant(
+              _unsigned_shift_right(i1.value_exn(), i2.value_exn()),
+            )
           } else if i2._min < 0L || i2._max >= 64L {
             type_integer_bot
           } else {
@@ -1768,8 +1802,18 @@ pub fn Node::compute(self : Node) -> Type {
             let s2 = _unsigned_shift_right(i1._max, sh)
             let wrap = i1._min < 0L && i1._max >= 0L
             TypeInteger::make(
-              if wrap { 0L } else { if s1 < s2 { s1 } else { s2 } },
-              if s1 > s2 { s1 } else { s2 },
+              if wrap {
+                0L
+              } else if s1 < s2 {
+                s1
+              } else {
+                s2
+              },
+              if s1 > s2 {
+                s1
+              } else {
+                s2
+              },
             )
           }
         _ => type_integer_bot
@@ -1807,7 +1851,11 @@ pub fn Node::compute(self : Node) -> Type {
             TypeInteger::constant(i0.value_exn().land(i1.value_exn()))
           } else {
             let mask = i0.mask().land(i1.mask())
-            if mask < 0L { type_integer_bot } else { TypeInteger::make(0L, mask) }
+            if mask < 0L {
+              type_integer_bot
+            } else {
+              TypeInteger::make(0L, mask)
+            }
           }
         _ => type_integer_bot
       }
@@ -1887,10 +1935,16 @@ pub fn Node::compute(self : Node) -> Type {
             _ => type_integer_bool
           }
         (Flt(f1), Flt(f2)) =>
-          if self.kind == BoolEqF || self.kind == BoolLtF || self.kind == BoolLeF {
+          if self.kind == BoolEqF ||
+            self.kind == BoolLtF ||
+            self.kind == BoolLeF {
             if f1.is_constant() && f2.is_constant() {
               TypeInteger::constant(
-                if self.bool_do_op_f(f1.value_exn(), f2.value_exn()) { 1L } else { 0L },
+                if self.bool_do_op_f(f1.value_exn(), f2.value_exn()) {
+                  1L
+                } else {
+                  0L
+                },
               )
             } else {
               type_integer_bool
@@ -2054,13 +2108,19 @@ fn Node::idealize_round_f32(self : Node) -> Node? {
 fn Node::idealize_sub(self : Node) -> Node? {
   // x - (-y) is x+y
   if self.input_exn(2).kind == Minus {
-    return Some(Node::new_add(self.input_exn(1), self.input_exn(2).input_exn(1)))
+    return Some(
+      Node::new_add(self.input_exn(1), self.input_exn(2).input_exn(1)),
+    )
   }
 
   // (-x) - y is -(x+y)
   if self.input_exn(1).kind == Minus {
     let minus = self.input_exn(1)
-    return Some(Node::new_minus(Node::new_add(minus.input_exn(1), self.input_exn(2)).peephole()))
+    return Some(
+      Node::new_minus(
+        Node::new_add(minus.input_exn(1), self.input_exn(2)).peephole(),
+      ),
+    )
   }
 
   None
@@ -2262,13 +2322,19 @@ fn Node::idealize_bool(self : Node) -> Node? {
     let rhs = self.input_exn(2)
     if rhs.kind != Constant {
       if lhs.kind == Constant {
-        let swapped =
-          if self.kind == BoolEqF { Node::new_bool_eqf(rhs, lhs) } else { Node::new_bool_eq(rhs, lhs) }
+        let swapped = if self.kind == BoolEqF {
+          Node::new_bool_eqf(rhs, lhs)
+        } else {
+          Node::new_bool_eq(rhs, lhs)
+        }
         return Some(swapped)
       }
       if lhs._nid > rhs._nid {
-        let swapped =
-          if self.kind == BoolEqF { Node::new_bool_eqf(rhs, lhs) } else { Node::new_bool_eq(rhs, lhs) }
+        let swapped = if self.kind == BoolEqF {
+          Node::new_bool_eqf(rhs, lhs)
+        } else {
+          Node::new_bool_eq(rhs, lhs)
+        }
         return Some(swapped)
       }
     }
@@ -2332,9 +2398,7 @@ fn Node::idealize_load(self : Node) -> Node? {
   let off = self.input_exn(3)
 
   // Simple Load-after-Store on same address.
-  if mem.kind == Store &&
-    ptr == mem.input_exn(2) &&
-    off == mem.input_exn(3) {
+  if mem.kind == Store && ptr == mem.input_exn(2) && off == mem.input_exn(3) {
     return Some(mem.input_exn(4))
   }
 
@@ -2443,12 +2507,11 @@ fn Node::idealize_load(self : Node) -> Node? {
     }
     let ld = fn(idx : Int) -> Node {
       let mem_in = memphi.input_exn(idx)
-      let ptr_in =
-        if ptr.kind == Phi && ptr.input_exn(0) == memphi.input_exn(0) {
-          ptr.input_exn(idx)
-        } else {
-          ptr
-        }
+      let ptr_in = if ptr.kind == Phi && ptr.input_exn(0) == memphi.input_exn(0) {
+        ptr.input_exn(idx)
+      } else {
+        ptr
+      }
       Node::new_load(
         self._memop_name,
         self._memop_alias,
@@ -2462,11 +2525,11 @@ fn Node::idealize_load(self : Node) -> Node? {
       let ld1 = ld(1)
       let ld2 = ld(2)
       return Some(
-        Node::new_phi(
-          self._memop_name,
-          self._declared_type,
-          [Some(region), Some(ld1), Some(ld2)],
-        ),
+        Node::new_phi(self._memop_name, self._declared_type, [
+          Some(region),
+          Some(ld1),
+          Some(ld2),
+        ]),
       )
     }
   }
@@ -2494,7 +2557,11 @@ fn Node::idealize_proj(self : Node) -> Node? {
       Node::new_cproj(
         iff,
         1 - self._proj_idx,
-        if self._proj_idx == 0 { "False" } else { "True" },
+        if self._proj_idx == 0 {
+          "False"
+        } else {
+          "True"
+        },
       ),
     )
   }
@@ -2556,8 +2623,7 @@ fn Node::idealize_region(self : Node) -> Node? {
     return None
   }
   let path = self.find_dead_input()
-  if path != 0 &&
-    !(self.kind == Loop && self.input(1) == self.input(path)) {
+  if path != 0 && !(self.kind == Loop && self.input(1) == self.input(path)) {
     // Cannot use the obvious output iterator here, because a Phi deleting an
     // input might recursively delete itself. This shuffles the output array,
     // and we might miss iterating an unrelated Phi.
@@ -2633,7 +2699,8 @@ fn Node::single_unique_input(self : Node) -> Node? {
   }
   let mut live : Node? = None
   for i = 1; i < self.n_ins(); i = i + 1 {
-    if region.input_exn(i).add_dep(self).ty() != xcontrol && self.input_exn(i) != self {
+    if region.input_exn(i).add_dep(self).ty() != xcontrol &&
+      self.input_exn(i) != self {
       let in_i = self.input_exn(i)
       match live {
         None => live = Some(in_i)
@@ -2746,7 +2813,8 @@ pub fn Node::idealize(self : Node) -> Node? {
     RoundF32 => self.idealize_round_f32()
     Minus => self.idealize_minus()
     If => self.idealize_if()
-    BoolEq | BoolEqF | BoolLt | BoolLtF | BoolLe | BoolLeF => self.idealize_bool()
+    BoolEq | BoolEqF | BoolLt | BoolLtF | BoolLe | BoolLeF =>
+      self.idealize_bool()
     CProj => self.idealize_proj()
     Load => self.idealize_load()
     Store => self.idealize_store()
@@ -2765,12 +2833,7 @@ pub fn Node::idealize(self : Node) -> Node? {
 pub fn Node::set_type(self : Node, typ : Type) -> Type? {
   let old = self._type
   match old {
-    Some(o) =>
-      if !typ.isa(o) {
-        panic()
-      } else if o == typ {
-        return old
-      }
+    Some(o) => if !typ.isa(o) { panic() } else if o == typ { return old }
     None => ()
   }
   self._type = Some(typ)
@@ -2787,7 +2850,11 @@ pub fn Node::peephole_opt(self : Node) -> Node? {
   // Replace constant computations from non-constants with a constant node
   let typ = self.ty()
   if self.kind != Constant && self.kind != XCtrl && typ.is_high_or_const() {
-    let con = if typ == xcontrol { Node::new_xctrl() } else { Node::new_constant(typ) }
+    let con = if typ == xcontrol {
+      Node::new_xctrl()
+    } else {
+      Node::new_constant(typ)
+    }
     return match con.peephole_opt() {
       Some(n) => Some(n)
       None => Some(con)
@@ -2847,7 +2914,10 @@ pub fn Node::add_return(self : Node, node : Node) -> Node {
 }
 
 ///|
-pub fn Node::iterate(self : Node, show? : Bool = false) -> Node raise ParseError {
+pub fn Node::iterate(
+  self : Node,
+  show? : Bool = false,
+) -> Node raise ParseError {
   if self.kind != Stop {
     panic()
   }
@@ -3460,12 +3530,15 @@ pub fn Node::upcast_(
   if ctrl.ty() == xcontrol {
     return None
   }
-  let pred =
-    if invert {
-      if pred.kind == Not { pred.input_exn(1) } else { Node::new_not(pred).peephole() }
+  let pred = if invert {
+    if pred.kind == Not {
+      pred.input_exn(1)
     } else {
-      pred
+      Node::new_not(pred).peephole()
     }
+  } else {
+    pred
+  }
 
   // Direct use of a value as predicate. This is a zero/null test.
   if _find_use(self._inputs, Some(pred)) != -1 {

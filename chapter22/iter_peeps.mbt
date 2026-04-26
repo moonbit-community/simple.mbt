@@ -118,7 +118,7 @@ fn WorkList::pop(self : WorkList) -> Node? {
 }
 
 ///|
-fn WorkList::on(self : WorkList, x : Node) -> Bool {
+fn WorkList::_on(self : WorkList, x : Node) -> Bool {
   self._ensure_on_size(x._nid + 1)
   self._on[x._nid]
 }
@@ -138,6 +138,9 @@ let mid_assert_flag : Ref[Bool] = Ref::{ val: false }
 
 ///|
 pub struct IterPeeps {}
+
+///|
+let _iter_peeps : IterPeeps = IterPeeps::{  }
 
 ///|
 pub fn IterPeeps::mid_assert() -> Bool {

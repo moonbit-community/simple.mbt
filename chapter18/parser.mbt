@@ -1,7 +1,7 @@
 ///|
 pub(all) suberror ParseError {
   Msg(String)
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 struct Parser {
@@ -594,7 +594,7 @@ fn Parser::parse_type(self : Parser) -> Type? raise ParseError {
 }
 
 ///|
-fn Parser::type_ary(self : Parser, t : Type) -> Type raise ParseError {
+fn Parser::type_ary(_self : Parser, t : Type) -> Type raise ParseError {
   match t {
     MemPtr(_, nil) if nil == 1 || nil == 2 =>
       raise ParseError::Msg("Arrays of reference types must always be nullable")
@@ -664,7 +664,6 @@ fn Parser::parse_asgn(self : Parser) -> Node raise ParseError {
   expr.unkeep()
 }
 
-
 // Make finals deep; widen ints to floats; narrow wide int types.
 // Early error if types do not match variable.
 
@@ -680,7 +679,7 @@ fn Parser::lift_expr(
 
   // Update declared forward-ref type to actual, if possible.
   match t {
-    MemPtr(obj, nil) =>
+    MemPtr(obj, _nil) =>
       match obj._fields {
         None =>
           match types.val.get(obj._name) {
@@ -722,7 +721,6 @@ fn Parser::widen_int(self : Parser, expr : Node, t : Type) -> Node {
   }
 }
 
-
 ///|
 fn Parser::parse_declaration_statement(self : Parser) -> Node raise ParseError {
   match self.parse_type() {
@@ -755,7 +753,8 @@ fn Parser::parse_declaration(self : Parser, t0 : Type) -> Node raise ParseError 
     // - BOTTOM is var and var is always not-final
     // - pointers are final by default (unless explicitly ! or initialized with null)
     xfinal = t == top ||
-      (t != bottom &&
+      (
+        t != bottom &&
         !has_bang &&
         expr.ty() != type_nil &&
         (match t {
@@ -763,7 +762,8 @@ fn Parser::parse_declaration(self : Parser, t0 : Type) -> Node raise ParseError 
           MemPtr(_, _) => true
           FunPtr(_) => true
           _ => false
-        }))
+        })
+      )
     // var/val: infer type from expression
     if infer_type {
       if expr.ty() == type_nil {
@@ -796,24 +796,9 @@ fn Parser::parse_declaration(self : Parser, t0 : Type) -> Node raise ParseError 
       raise ParseError::Msg(self.error_syntax("=expression"))
     }
     let init_ty = match t {
-      Ptr(nil) =>
-        if nil == 0 || nil == 3 {
-          type_nil
-        } else {
-          top
-        }
-      MemPtr(_, nil) =>
-        if nil == 0 || nil == 3 {
-          type_nil
-        } else {
-          top
-        }
-      FunPtr(fp) =>
-        if fp._nil == 0 || fp._nil == 3 {
-          type_nil
-        } else {
-          top
-        }
+      Ptr(nil) => if nil == 0 || nil == 3 { type_nil } else { top }
+      MemPtr(_, nil) => if nil == 0 || nil == 3 { type_nil } else { top }
+      FunPtr(fp) => if fp._nil == 0 || fp._nil == 3 { type_nil } else { top }
       Int(_) => type_integer_zero
       Flt(_) => type_float_zero
       _ => bottom
@@ -835,7 +820,6 @@ fn Parser::parse_declaration(self : Parser, t0 : Type) -> Node raise ParseError 
   }
   lift
 }
-
 
 ///|
 fn Parser::parse_expression(self : Parser) -> Node raise ParseError {
@@ -1173,13 +1157,7 @@ fn Parser::new_struct(
       },
     )
   }
-  let nnn = Node::new_new(
-      MemPtr(obj, 2),
-      self._scope.ctrl(),
-      size,
-      mems,
-      inits,
-    )
+  let nnn = Node::new_new(MemPtr(obj, 2), self._scope.ctrl(), size, mems, inits)
     .peephole()
     .keep()
   for i = 0; i < fields.length(); i = i + 1 {
@@ -1254,7 +1232,7 @@ fn Parser::parse_postfix(self : Parser, expr : Node) -> Node raise ParseError {
   let mut tf = field._type
   // Update declared forward ref to the actual
   match tf {
-    MemPtr(obj, nil) =>
+    MemPtr(obj, _nil) =>
       match obj._fields {
         None =>
           match types.val.get(obj._name) {
@@ -1566,7 +1544,7 @@ fn Lexer::next_x_char(self : Lexer) -> Char? {
 fn Lexer::match_syntax(self : Lexer, syntax : String) -> Bool {
   self.skip_white_space()
   let syntax_view = syntax.to_string_view()
-  let rest = try! self._input[self._position:]
+  let rest = self._input[self._position:]
   if rest.has_prefix(syntax_view) {
     self._position += syntax_view.length()
     true
@@ -1646,7 +1624,7 @@ fn Lexer::parse_number(self : Lexer) -> Type raise ParseError {
   let len = self.is_long_or_double()
   let abs_len = if len < 0 { -len } else { len }
   let end = old + abs_len
-  let view = try! self._input[old:end]
+  let view = self._input[old:end]
   self._position = end
   if len > 0 {
     if abs_len > 1 && view.get_char(0) == Some('0') {
@@ -1654,12 +1632,12 @@ fn Lexer::parse_number(self : Lexer) -> Type raise ParseError {
         "Syntax error: integer values cannot start with '0'",
       )
     }
-    let val = @strconv.parse_int64(view, base=10) catch {
+    let val = @string.parse_int64(view, base=10) catch {
       _ => raise ParseError::Msg("Syntax error, expected integer literal")
     }
     TypeInteger::constant(val)
   } else {
-    let val = @strconv.parse_double(view) catch {
+    let val = @string.parse_double(view) catch {
       _ => raise ParseError::Msg("Syntax error, expected float literal")
     }
     TypeFloat::constant(val)
@@ -1673,7 +1651,7 @@ fn Lexer::parse_number_string(self : Lexer) -> String {
   let abs_len = if len < 0 { -len } else { len }
   let end = start + abs_len
   self._position = end
-  let view = try! self._input[start:end]
+  let view = self._input[start:end]
   view.to_string()
 }
 
@@ -1778,7 +1756,7 @@ fn Lexer::parse_id(self : Lexer) -> String {
     }
   }
   let end = self._position
-  let view = try! self._input[start:end]
+  let view = self._input[start:end]
   view.to_string()
 }
 

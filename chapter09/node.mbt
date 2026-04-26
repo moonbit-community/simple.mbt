@@ -19,7 +19,7 @@ pub enum NodeKind {
   Loop
   Phi
   Scope
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub struct Node {
@@ -873,17 +873,22 @@ pub fn Node::compute(self : Node) -> Type {
       }
       self.input_exn(1).ty()
     }
-    Phi => {
+    Phi =>
       match self.input(0) {
         Some(region) =>
           if region.kind != Region && region.kind != Loop {
-            if region.ty() == xcontrol { top } else { self.ty() }
+            if region.ty() == xcontrol {
+              top
+            } else {
+              self.ty()
+            }
           } else if region.in_progress() {
             bottom
           } else {
             let mut t = top
             for i = 1; i < self.n_ins(); i = i + 1 {
-              if region.input_exn(i).add_dep(self).ty() != xcontrol && self.input_exn(i) != self {
+              if region.input_exn(i).add_dep(self).ty() != xcontrol &&
+                self.input_exn(i) != self {
                 t = t.meet(self.input_exn(i).ty())
               }
             }
@@ -891,7 +896,6 @@ pub fn Node::compute(self : Node) -> Type {
           }
         None => bottom
       }
-    }
     Add => {
       let t1 = self.input_exn(1).ty()
       let t2 = self.input_exn(2).ty()
@@ -1222,8 +1226,7 @@ fn Node::idealize_region(self : Node) -> Node? {
     return None
   }
   let path = self.find_dead_input()
-  if path != 0 &&
-    !(self.kind == Loop && self.input(1) == self.input(path)) {
+  if path != 0 && !(self.kind == Loop && self.input(1) == self.input(path)) {
     // Cannot use the obvious output iterator here, because a Phi deleting an
     // input might recursively delete itself. This shuffles the output array,
     // and we might miss iterating an unrelated Phi.
@@ -1299,7 +1302,8 @@ fn Node::single_unique_input(self : Node) -> Node? {
   }
   let mut live : Node? = None
   for i = 1; i < self.n_ins(); i = i + 1 {
-    if region.input_exn(i).add_dep(self).ty() != xcontrol && self.input_exn(i) != self {
+    if region.input_exn(i).add_dep(self).ty() != xcontrol &&
+      self.input_exn(i) != self {
       let in_i = self.input_exn(i)
       match live {
         None => live = Some(in_i)
@@ -1367,12 +1371,7 @@ pub fn Node::idealize(self : Node) -> Node? {
 pub fn Node::set_type(self : Node, typ : Type) -> Type? {
   let old = self._type
   match old {
-    Some(o) =>
-      if !typ.isa(o) {
-        panic()
-      } else if o == typ {
-        return old
-      }
+    Some(o) => if !typ.isa(o) { panic() } else if o == typ { return old }
     None => ()
   }
   self._type = Some(typ)
@@ -1453,7 +1452,7 @@ pub fn Node::iterate(self : Node, show? : Bool = false) -> Node {
   if self.kind != Stop {
     panic()
   }
-  IterPeeps::iterate(self, show=show)
+  IterPeeps::iterate(self, show~)
 }
 
 ///|

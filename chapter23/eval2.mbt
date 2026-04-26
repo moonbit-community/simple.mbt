@@ -2,6 +2,9 @@
 pub struct Eval2 {}
 
 ///|
+let _eval2 : Eval2 = Eval2::{  }
+
+///|
 pub fn Eval2::eval(code : CodeGen, arg : Int64, loops? : Int = 1000) -> String {
   // Force scheduling before running the interpreter (matches refs/simple intent).
   ignore(code.gcm().local_sched())
@@ -14,6 +17,7 @@ pub fn Eval2::eval(code : CodeGen, arg : Int64, loops? : Int = 1000) -> String {
     EvalValue::Int(i) => "\{i}"
     EvalValue::Float(f) => "\{f}"
     EvalValue::Null => "null"
-    EvalValue::Obj(_) | EvalValue::Mem(_) | EvalValue::Tuple(_) => "\{v}"
+    EvalValue::Obj(_) | EvalValue::Mem(_) | EvalValue::Tuple(_) =>
+      to_repr(v).to_string()
   }
 }

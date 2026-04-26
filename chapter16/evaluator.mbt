@@ -6,21 +6,21 @@ pub enum EvalValue {
   Null
   Mem(Int)
   Tuple(Array[EvalValue])
-} derive(Show)
+} derive(Debug)
 
 ///|
 pub struct Obj {
   id : Int
   struct_ : TypeStruct
   fields : Array[EvalValue]
-} derive(Show)
+} derive(Debug)
 
 ///|
 pub enum EvalStatus {
   Value(EvalValue)
   Fallthrough
   Timeout
-} derive(Show)
+} derive(Debug)
 
 ///|
 struct Evaluator {
@@ -84,7 +84,11 @@ fn Evaluator::find_start(visited : Array[Bool], node : Node?) -> Node? {
 }
 
 ///|
-fn Evaluator::collect_nodes(nodes : Array[Node?], visited : Array[Bool], n : Node) -> Unit {
+fn Evaluator::collect_nodes(
+  nodes : Array[Node?],
+  visited : Array[Bool],
+  n : Node,
+) -> Unit {
   _ensure_bool(visited, n._nid)
   if visited[n._nid] {
     return
@@ -201,7 +205,11 @@ fn Evaluator::ensure_values(self : Evaluator, nid : Int) -> Unit {
 }
 
 ///|
-fn Evaluator::set_value(self : Evaluator, node : Node, value : EvalValue) -> Unit {
+fn Evaluator::set_value(
+  self : Evaluator,
+  node : Node,
+  value : EvalValue,
+) -> Unit {
   self.ensure_values(node._nid)
   self.values[node._nid] = Some(value)
 }
@@ -240,6 +248,7 @@ fn Evaluator::off_to_idx(off : Int64, t : TypeStruct) -> Int64 {
   off >> scale
 }
 
+///|
 fn Evaluator::alloc(self : Evaluator, ptr : Type, size : Int64) -> Obj {
   let obj = match ptr {
     Type::MemPtr(obj, _) => obj
@@ -250,30 +259,35 @@ fn Evaluator::alloc(self : Evaluator, ptr : Type, size : Int64) -> Obj {
     Some(fs) => fs
   }
 
-  let fields =
-    if obj.is_ary() {
-      let len = Evaluator::off_to_idx(size, obj)
-      if len < 0L {
-        panic()
-      }
-      let header_len = struct_fields.length() - 1
-      let body_len = len.to_int()
-      let out : Array[EvalValue] = Array::make(header_len + body_len, EvalValue::Null)
-      for i = 0; i < header_len; i = i + 1 {
-        out[i] = Evaluator::default_value(struct_fields[i]._type)
-      }
-      let body_type = struct_fields[struct_fields.length() - 1]._type
-      for i = 0; i < body_len; i = i + 1 {
-        out[header_len + i] = Evaluator::default_value(body_type)
-      }
-      out
-    } else {
-      let out : Array[EvalValue] = Array::make(struct_fields.length(), EvalValue::Null)
-      for i = 0; i < struct_fields.length(); i = i + 1 {
-        out[i] = Evaluator::default_value(struct_fields[i]._type)
-      }
-      out
+  let fields = if obj.is_ary() {
+    let len = Evaluator::off_to_idx(size, obj)
+    if len < 0L {
+      panic()
     }
+    let header_len = struct_fields.length() - 1
+    let body_len = len.to_int()
+    let out : Array[EvalValue] = Array::make(
+      header_len + body_len,
+      EvalValue::Null,
+    )
+    for i = 0; i < header_len; i = i + 1 {
+      out[i] = Evaluator::default_value(struct_fields[i]._type)
+    }
+    let body_type = struct_fields[struct_fields.length() - 1]._type
+    for i = 0; i < body_len; i = i + 1 {
+      out[header_len + i] = Evaluator::default_value(body_type)
+    }
+    out
+  } else {
+    let out : Array[EvalValue] = Array::make(
+      struct_fields.length(),
+      EvalValue::Null,
+    )
+    for i = 0; i < struct_fields.length(); i = i + 1 {
+      out[i] = Evaluator::default_value(struct_fields[i]._type)
+    }
+    out
+  }
 
   let id = self.next_obj_id
   self.next_obj_id += 1
@@ -314,7 +328,8 @@ fn Evaluator::eq(lhs : EvalValue, rhs : EvalValue) -> Bool {
     (EvalValue::Int(a), EvalValue::Int(b)) => a == b
     (EvalValue::Float(a), EvalValue::Float(b)) => a == b
     (EvalValue::Obj(a), EvalValue::Obj(b)) => a.id == b.id
-    (EvalValue::Null, EvalValue::Obj(_)) | (EvalValue::Obj(_), EvalValue::Null) => false
+    (EvalValue::Null, EvalValue::Obj(_))
+    | (EvalValue::Obj(_), EvalValue::Null) => false
     _ => false
   }
 }
@@ -373,7 +388,9 @@ fn Evaluator::exec(self : Evaluator, node : Node) -> EvalValue {
       if rhs == 0L {
         EvalValue::Int(0L)
       } else {
-        EvalValue::Int(Evaluator::as_int(self.get_value(node.input_exn(1))) / rhs)
+        EvalValue::Int(
+          Evaluator::as_int(self.get_value(node.input_exn(1))) / rhs,
+        )
       }
     }
     DivF =>
@@ -381,8 +398,10 @@ fn Evaluator::exec(self : Evaluator, node : Node) -> EvalValue {
         Evaluator::as_float(self.get_value(node.input_exn(1))) /
         Evaluator::as_float(self.get_value(node.input_exn(2))),
       )
-    Minus => EvalValue::Int(-Evaluator::as_int(self.get_value(node.input_exn(1))))
-    MinusF => EvalValue::Float(-Evaluator::as_float(self.get_value(node.input_exn(1))))
+    Minus =>
+      EvalValue::Int(-Evaluator::as_int(self.get_value(node.input_exn(1))))
+    MinusF =>
+      EvalValue::Float(-Evaluator::as_float(self.get_value(node.input_exn(1))))
     Shl => {
       let lhs = Evaluator::as_int(self.get_value(node.input_exn(1)))
       let rhs = Evaluator::as_int(self.get_value(node.input_exn(2)))
@@ -429,9 +448,9 @@ fn Evaluator::exec(self : Evaluator, node : Node) -> EvalValue {
     BoolEq =>
       EvalValue::Int(
         if Evaluator::eq(
-          self.get_value(node.input_exn(1)),
-          self.get_value(node.input_exn(2)),
-        ) {
+            self.get_value(node.input_exn(1)),
+            self.get_value(node.input_exn(2)),
+          ) {
           1L
         } else {
           0L
@@ -488,7 +507,9 @@ fn Evaluator::exec(self : Evaluator, node : Node) -> EvalValue {
       )
     RoundF32 =>
       EvalValue::Float(
-        Float::from_double(Evaluator::as_float(self.get_value(node.input_exn(1)))).to_double(),
+        Float::from_double(
+          Evaluator::as_float(self.get_value(node.input_exn(1))),
+        ).to_double(),
       )
     Cast => self.get_value(node.input_exn(1))
     New => {
@@ -511,7 +532,10 @@ fn Evaluator::exec(self : Evaluator, node : Node) -> EvalValue {
           obj.fields[i] = self.get_value(node.input_exn(2 + len + i))
         }
       }
-      let vals : Array[EvalValue] = Array::make(struct_fields.length() + 2, EvalValue::Mem(-1))
+      let vals : Array[EvalValue] = Array::make(
+        struct_fields.length() + 2,
+        EvalValue::Mem(-1),
+      )
       vals[0] = EvalValue::Mem(-1)
       vals[1] = EvalValue::Obj(obj)
       for i = 0; i < struct_fields.length(); i = i + 1 {
@@ -593,11 +617,10 @@ fn Evaluator::exec(self : Evaluator, node : Node) -> EvalValue {
 fn Evaluator::exec_anchor(self : Evaluator, anchor : Node) -> Unit {
   match self.schedule.get(anchor._nid) {
     None => ()
-    Some(nodes) => {
+    Some(nodes) =>
       for n in nodes {
         ignore(self.exec(n))
       }
-    }
   }
 }
 
@@ -616,8 +639,8 @@ fn Evaluator::find_control(control : Node) -> Node? {
 fn Evaluator::find_projection(node : Node, idx : Int) -> Node? {
   for user in node._outputs {
     match user {
-      Some(proj) if (proj.kind == Proj || proj.kind == CProj) && proj._proj_idx == idx =>
-        return Some(proj)
+      Some(proj) if (proj.kind == Proj || proj.kind == CProj) &&
+        proj._proj_idx == idx => return Some(proj)
       _ => ()
     }
   }
@@ -668,7 +691,10 @@ fn Evaluator::run(
   let start_ty = start.compute()
   let start_tuple = match start_ty {
     Tuple(types) => {
-      let vals : Array[EvalValue] = Array::make(types.length(), EvalValue::Mem(-1))
+      let vals : Array[EvalValue] = Array::make(
+        types.length(),
+        EvalValue::Mem(-1),
+      )
       if types.length() > 0 {
         vals[0] = EvalValue::Mem(-1)
       }
@@ -705,7 +731,14 @@ fn Evaluator::run(
       If | Never => {
         self.exec_anchor(ctrl_node)
         let pred = self.get_value(ctrl_node.input_exn(1))
-        Evaluator::find_projection(ctrl_node, if Evaluator::is_true(pred) { 0 } else { 1 })
+        Evaluator::find_projection(
+          ctrl_node,
+          if Evaluator::is_true(pred) {
+            0
+          } else {
+            1
+          },
+        )
       }
       Return => {
         self.exec_anchor(ctrl_node)

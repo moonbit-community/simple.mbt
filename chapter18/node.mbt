@@ -45,7 +45,7 @@ pub enum NodeKind {
   Loop
   Phi
   Scope
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub struct Var {
@@ -53,7 +53,7 @@ pub struct Var {
   _name : String
   _type : Type
   _final : Bool
-} derive(Eq)
+} derive(Eq, Debug)
 
 ///|
 pub struct Node {
@@ -1521,7 +1521,8 @@ pub fn Node::compute(self : Node) -> Type {
     CProj | Proj => {
       let ctrl_ty = self.input_exn(0).ty()
       match ctrl_ty {
-        Tuple(Some(types)) if self._proj_idx < types.length() => types[self._proj_idx]
+        Tuple(Some(types)) if self._proj_idx < types.length() =>
+          types[self._proj_idx]
         _ => bottom
       }
     }

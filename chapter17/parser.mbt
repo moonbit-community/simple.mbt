@@ -1,7 +1,7 @@
 ///|
 pub(all) suberror ParseError {
   Msg(String)
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 struct Parser {
@@ -594,7 +594,7 @@ fn Parser::parse_type(self : Parser) -> Type? raise ParseError {
 }
 
 ///|
-fn Parser::type_ary(self : Parser, t : Type) -> Type raise ParseError {
+fn Parser::type_ary(_self : Parser, t : Type) -> Type raise ParseError {
   match t {
     MemPtr(_, nil) if !nil =>
       raise ParseError::Msg("Arrays of reference types must always be nullable")
@@ -672,7 +672,7 @@ fn Parser::lift_expr(
 
   // Update declared forward-ref type to actual, if possible.
   match t {
-    MemPtr(obj, nil) =>
+    MemPtr(obj, _nil) =>
       match obj._fields {
         None =>
           match types.val.get(obj._name) {
@@ -1187,7 +1187,7 @@ fn Parser::parse_postfix(self : Parser, expr : Node) -> Node raise ParseError {
   let mut tf = field._type
   // Update declared forward ref to the actual
   match tf {
-    MemPtr(obj, nil) =>
+    MemPtr(obj, _nil) =>
       match obj._fields {
         None =>
           match types.val.get(obj._name) {
@@ -1499,7 +1499,7 @@ fn Lexer::next_x_char(self : Lexer) -> Char? {
 fn Lexer::match_syntax(self : Lexer, syntax : String) -> Bool {
   self.skip_white_space()
   let syntax_view = syntax.to_string_view()
-  let rest = try! self._input[self._position:]
+  let rest = self._input[self._position:]
   if rest.has_prefix(syntax_view) {
     self._position += syntax_view.length()
     true
@@ -1579,7 +1579,7 @@ fn Lexer::parse_number(self : Lexer) -> Type raise ParseError {
   let len = self.is_long_or_double()
   let abs_len = if len < 0 { -len } else { len }
   let end = old + abs_len
-  let view = try! self._input[old:end]
+  let view = self._input[old:end]
   self._position = end
   if len > 0 {
     if abs_len > 1 && view.get_char(0) == Some('0') {
@@ -1587,12 +1587,12 @@ fn Lexer::parse_number(self : Lexer) -> Type raise ParseError {
         "Syntax error: integer values cannot start with '0'",
       )
     }
-    let val = @strconv.parse_int64(view, base=10) catch {
+    let val = @string.parse_int64(view, base=10) catch {
       _ => raise ParseError::Msg("Syntax error, expected integer literal")
     }
     TypeInteger::constant(val)
   } else {
-    let val = @strconv.parse_double(view) catch {
+    let val = @string.parse_double(view) catch {
       _ => raise ParseError::Msg("Syntax error, expected float literal")
     }
     TypeFloat::constant(val)
@@ -1606,7 +1606,7 @@ fn Lexer::parse_number_string(self : Lexer) -> String {
   let abs_len = if len < 0 { -len } else { len }
   let end = start + abs_len
   self._position = end
-  let view = try! self._input[start:end]
+  let view = self._input[start:end]
   view.to_string()
 }
 
@@ -1711,7 +1711,7 @@ fn Lexer::parse_id(self : Lexer) -> String {
     }
   }
   let end = self._position
-  let view = try! self._input[start:end]
+  let view = self._input[start:end]
   view.to_string()
 }
 

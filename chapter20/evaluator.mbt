@@ -6,21 +6,21 @@ pub enum EvalValue {
   Null
   Mem(Int)
   Tuple(Array[EvalValue])
-} derive(Show)
+} derive(Debug)
 
 ///|
 pub struct Obj {
   id : Int
   struct_ : TypeStruct
   fields : Array[EvalValue]
-} derive(Show)
+} derive(Debug)
 
 ///|
 pub enum EvalStatus {
   Value(EvalValue)
   Fallthrough
   Timeout
-} derive(Show)
+} derive(Debug)
 
 ///|
 struct Evaluator {
@@ -123,10 +123,7 @@ fn _push_map(m : Map[Int, Array[Node]], key : Int, value : Node) -> Unit {
 }
 
 ///|
-fn Evaluator::ordered_group(
-  anchor : Node,
-  group : Array[Node],
-) -> Array[Node] {
+fn Evaluator::ordered_group(anchor : Node, group : Array[Node]) -> Array[Node] {
   if !local_scheduled.val {
     return Evaluator::topo_sort(group)
   }

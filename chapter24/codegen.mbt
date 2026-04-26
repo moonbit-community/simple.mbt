@@ -7,13 +7,13 @@ pub enum Phase {
   Schedule
   LocalSched
   RegAlloc
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub enum CallingConv {
   Win64
   SystemV
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub struct CodeGen {

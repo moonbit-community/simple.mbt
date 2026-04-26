@@ -10,7 +10,13 @@ let _linker : Ref[Map[String, Node]] = Ref::{ val: Map::new() }
 ///|
 pub let main_sig : Ref[TypeFunPtr] = Ref::{
   // Overwritten on each Parser/CodeGen creation.
-  val: { _nil: 2, _sig: Some([type_integer_bot]), _ret: bottom, _fidxs: 1L, _name: None },
+  val: {
+    _nil: 2,
+    _sig: Some([type_integer_bot]),
+    _ret: bottom,
+    _fidxs: 1L,
+    _name: None,
+  },
 }
 
 ///|
@@ -64,9 +70,7 @@ pub fn link_put(fun : Node) -> Unit {
     panic()
   }
   match fun._fun_sig {
-    Some(sig) => {
-      _linker.val[_tfp_key(sig)] = fun
-    }
+    Some(sig) => _linker.val[_tfp_key(sig)] = fun
     None => panic()
   }
 }
